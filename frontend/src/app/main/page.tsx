@@ -21,12 +21,14 @@ export default function MainPage() {
           </div>
 
           <div className="pt-4">
-            <Button
-              size="lg"
-              className="bg-secondary hover:bg-secondary/90 text-secondary-foreground px-12 py-4 text-lg font-semibold rounded-lg shadow-lg hover:shadow-xl transition-all duration-200 transform hover:scale-105"
-            >
-              Start Matching
-            </Button>
+          <a href="/matching">
+              <Button
+                size="lg"
+                className="bg-secondary hover:bg-secondary/90 text-secondary-foreground px-12 py-4 text-lg font-semibold rounded-lg shadow-lg hover:shadow-xl transition-all duration-200 transform hover:scale-105"
+              >
+                Start Matching
+              </Button>
+            </a>
           </div>
         </div>
       </main>
