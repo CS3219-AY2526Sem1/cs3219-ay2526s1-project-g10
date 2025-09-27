@@ -1,0 +1,88 @@
+name: PeerPrep CI
+
+on:
+  push:
+    paths:
+      - 'frontend/**'
+      - 'user-service/**'
+      - 'matching-service/**'
+      - 'question-service/**'
+      - 'collab-service/**'
+  pull_request:
+    paths:
+      - 'frontend/**'
+      - 'user-service/**'
+      - 'matching-service/**'
+      - 'question-service/**'
+      - 'collab-service/**'
+
+jobs:
+  lint-frontend:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v3
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - run: npm ci
+      - run: npm run lint
+
+  lint-user-service:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: user-service
+    steps:
+      - uses: actions/checkout@v3
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - run: npm ci
+      - run: npm run lint
+
+  lint-matching-service:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: matching-service
+    steps:
+      - uses: actions/checkout@v3
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - run: npm ci
+      - run: npm run lint
+
+  lint-question-service:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: question-service
+    steps:
+      - uses: actions/checkout@v3
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - run: npm ci
+      - run: npm run lint
+
+  lint-collab-service:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: collab-service
+    steps:
+      - uses: actions/checkout@v3
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - run: npm ci
+      - run: npm run lint

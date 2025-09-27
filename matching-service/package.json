@@ -7,12 +7,16 @@
   "scripts": {
     "dev": "nodemon app/server.js",
     "start": "node app/server.js",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "lint": "npx eslint ."
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "devDependencies": {
+    "@eslint/js": "^9.36.0",
+    "eslint": "^9.36.0",
+    "globals": "^16.4.0",
     "nodemon": "^3.1.4",
     "prisma": "^6.16.2",
     "tsx": "^4.20.5"
