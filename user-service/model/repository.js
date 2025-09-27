@@ -1,71 +1,63 @@
-import UserModel from "./user-model.js";
-import "dotenv/config";
-import { connect } from "mongoose";
+import { PrismaClient } from "@prisma/client";
+const prisma = new PrismaClient();
 
 export async function connectToDB() {
-  let mongoDBUri =
-    process.env.ENV === "PROD"
-      ? process.env.DB_CLOUD_URI
-      : process.env.DB_LOCAL_URI;
-
-  await connect(mongoDBUri);
+  // Prisma automatically connects to the database when you use the client
+  console.log("Prisma client initialized");
 }
 
 export async function createUser(username, email, password) {
-  return new UserModel({ username, email, password }).save();
+  return prisma.user.create({
+    data: { username, email, password },
+  });
 }
 
 export async function findUserByEmail(email) {
-  return UserModel.findOne({ email });
+  return prisma.user.findUnique({
+    where: { email },
+  });
 }
 
 export async function findUserById(userId) {
-  return UserModel.findById(userId);
+  return prisma.user.findUnique({
+    where: { id: userId },
+  });
 }
 
 export async function findUserByUsername(username) {
-  return UserModel.findOne({ username });
+  return prisma.user.findUnique({
+    where: { username },
+  });
 }
 
 export async function findUserByUsernameOrEmail(username, email) {
-  return UserModel.findOne({
-    $or: [
-      { username },
-      { email },
-    ],
+  return prisma.user.findFirst({
+    where: {
+      OR: [{ username }, { email }],
+    },
   });
 }
 
 export async function findAllUsers() {
-  return UserModel.find();
+  return prisma.user.findMany();
 }
 
 export async function updateUserById(userId, username, email, password) {
-  return UserModel.findByIdAndUpdate(
-    userId,
-    {
-      $set: {
-        username,
-        email,
-        password,
-      },
-    },
-    { new: true },  // return the updated user
-  );
+  return prisma.user.update({
+    where: { id: userId },
+    data: { username, email, password },
+  });
 }
 
 export async function updateUserPrivilegeById(userId, isAdmin) {
-  return UserModel.findByIdAndUpdate(
-    userId,
-    {
-      $set: {
-        isAdmin,
-      },
-    },
-    { new: true },  // return the updated user
-  );
+  return prisma.user.update({
+    where: { id: userId },
+    data: { isAdmin },
+  });
 }
 
 export async function deleteUserById(userId) {
-  return UserModel.findByIdAndDelete(userId);
+  return prisma.user.delete({
+    where: { id: userId },
+  });
 }
