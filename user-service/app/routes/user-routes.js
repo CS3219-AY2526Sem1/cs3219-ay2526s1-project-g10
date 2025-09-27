@@ -8,8 +8,7 @@ import {
   updateUser,
   updateUserPrivilege,
 } from "../controller/user-controller.js";
-import { verifyAccessToken, verifyIsAdmin, verifyIsOwnerOrAdmin } from "../middleware/basic-access-control.js";
-
+import { verifyAccessToken, verifyIsAdmin, verifyIsOwnerOrAdmin } from "../../middleware/basic-access-control.js";
 const router = express.Router();
 
 router.get("/", verifyAccessToken, verifyIsAdmin, getAllUsers);

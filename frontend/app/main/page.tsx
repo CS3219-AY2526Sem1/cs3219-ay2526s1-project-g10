@@ -1,5 +1,5 @@
-import { Button } from "@/components/ui/button"
-import { Header } from "@/components/navBar/navBar"
+import { Button } from "../../components/ui/button"
+import { Header } from "../../components/navBar/navBar"
 
 export default function MainPage() {
   return (

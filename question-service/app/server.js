@@ -7,5 +7,5 @@ const port = process.env.QUESTION_SERVICE_PORT;
 const server = http.createServer(app);
 
 server.listen(port, () => {
-  console.log(`Service is running on http://localhost:${port}`);
+  console.log(`Question service is running on http://localhost:${port}`);
 });

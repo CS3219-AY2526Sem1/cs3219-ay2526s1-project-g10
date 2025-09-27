@@ -1,4 +1,4 @@
-import { Header } from "@/components/navBar/navBar"
+import { Header } from "../../components/navBar/navBar"
 
 export default function MatchPage() {
   return (

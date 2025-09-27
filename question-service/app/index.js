@@ -8,7 +8,7 @@ app.use(cors());
 
 // Define routes
 app.use("/api", (req, res) => {
-  res.json({ message: "Service is running!" });
+  res.json({ message: "Question service is running!" });
 });
 
 // Handle 404 errors

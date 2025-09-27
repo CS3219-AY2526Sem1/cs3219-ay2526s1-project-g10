@@ -8,8 +8,6 @@ const port = process.env.USER_SERVICE_PORT || 3001;
 const server = http.createServer(index);
 
 await connectToDB().then(() => {
-  console.log("MongoDB Connected!");
-
   server.listen(port);
   console.log("User service server listening on http://localhost:" + port);
 }).catch((err) => {
