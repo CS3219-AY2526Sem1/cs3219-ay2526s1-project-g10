@@ -1,5 +1,6 @@
 "use client"
 
+import Link from "next/link"
 import { useState } from "react"
 
 export function Header() {
@@ -11,28 +12,28 @@ export function Header() {
         <div className="flex items-center justify-between h-16">
           <div className="flex items-center space-x-8">
             <div className="flex-shrink-0">
-              <a href='/' className="text-xl font-bold text-primary-foreground">PeerPrep</a>
+              <Link href='/' className="text-xl font-bold text-primary-foreground">PeerPrep</Link>
             </div>
 
             <nav className="hidden md:flex items-center space-x-6">
-              <a
+              <Link
                 href="/matching"
                 className="text-sm text-primary-foreground hover:text-primary-foreground/80 transition-colors"
               >
                 Matching
-              </a>
-              <a
+              </Link>
+              <Link
                 href="/question"
                 className="text-sm text-primary-foreground hover:text-primary-foreground/80 transition-colors"
               >
                 Question
-              </a>
-              <a
+              </Link>
+              <Link
                 href="/history"
                 className="text-sm text-primary-foreground hover:text-primary-foreground/80 transition-colors"
               >
                 Question History
-              </a>
+              </Link>
             </nav>
           </div>
 

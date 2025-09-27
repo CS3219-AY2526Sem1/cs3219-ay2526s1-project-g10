@@ -18,7 +18,7 @@ app.use("/api", (req, res) => {
 });
 
 // Handle 404 errors
-app.use((req, res, next) => {
+app.use((req, res) => {
   res.status(404).json({ error: "Route not found" });
 });
 
