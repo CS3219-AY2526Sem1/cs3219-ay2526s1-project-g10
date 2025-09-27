@@ -6,6 +6,11 @@ services:
       - "3001:3001"
     env_file:
       - ./user-service/.env
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3001/healthz"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
 
   matching-service:
     build: ./matching-service
@@ -13,6 +18,11 @@ services:
       - "3003:3003"
     env_file:
       - ./matching-service/.env
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3003/healthz"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
 
   question-service:
     build: ./question-service
@@ -20,6 +30,11 @@ services:
       - "3002:3002"
     env_file:
       - ./question-service/.env
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3002/healthz"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
 
   collab-service:
     build: ./collab-service
@@ -27,6 +42,11 @@ services:
       - "3004:3004"
     env_file:
       - ./collab-service/.env
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3004/healthz"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
 
   frontend:
     build: ./frontend
@@ -34,6 +54,11 @@ services:
       - "3000:3000"
     env_file:
       - ./frontend/.env
+    depends_on:
+      - user-service
+      - question-service
+      - matching-service
+      - collab-service
 
 
 volumes:

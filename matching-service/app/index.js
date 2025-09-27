@@ -7,6 +7,12 @@ app.use(express.json());
 app.use(cors());
 
 // Define routes
+
+// Health check
+app.get("/healthz", (req, res) => {
+  res.status(200).json({ status: "ok" });
+}); 
+
 app.use("/api", (req, res) => {
   res.json({ message: "Matching service is running!" });
 });

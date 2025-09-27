@@ -5,6 +5,7 @@ ENV NODE_ENV=development
 
 COPY package.json package-lock.json ./
 RUN npm ci
+RUN apk add --no-cache curl
 
 FROM base AS dev
 COPY . .
