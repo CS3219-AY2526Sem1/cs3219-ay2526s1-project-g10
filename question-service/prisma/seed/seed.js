@@ -1,13 +1,28 @@
-import {PrismaClient} from '../generated/prisma';
+import {PrismaClient} from '../../generated/prisma/index.js';
 import fs from 'fs';
+import path from 'path';
+import {fileURLToPath} from 'url';
+
+// To use __dirname in ES modules
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+const dataPath = path.join(__dirname, 'questions-list-cleaned.json');
 
 // Initialize Prisma Client
 const prisma = new PrismaClient();
 async function main() {
-    //read from json file
-    const data = JSON.parse(fs.readFileSync('questions-list.json', 'utf-8'));
+    //read from JSON file
+    const data = JSON.parse(fs.readFileSync(dataPath, 'utf-8'));
 
     for (const q of data) {
+
+        // Skip if any compulsory field missing
+        if (!q.title || !q.description || !q.solution || !q.difficulty || !q.topic) continue;
+
+        // Skip if difficulty not one of EASY, MEDIUM, HARD
+        const difficulty = q.difficulty.toUpperCase();
+        if (!["EASY","MEDIUM","HARD"].includes(difficulty)) continue;
+
         //create question
         await prisma.question.create({
             data: {
