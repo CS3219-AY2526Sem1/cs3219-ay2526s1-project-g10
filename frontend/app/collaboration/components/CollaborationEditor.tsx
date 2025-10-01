@@ -1,5 +1,6 @@
 import { useEffect, useRef } from "react"
 import MonacoEditor from "@monaco-editor/react"
+import * as monaco from "monaco-editor"
 import * as Y from "yjs"
 import { MonacoBinding } from "y-monaco"
 import { WebsocketProvider } from "y-websocket"
