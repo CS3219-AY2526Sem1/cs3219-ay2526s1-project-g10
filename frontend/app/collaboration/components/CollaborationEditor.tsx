@@ -4,6 +4,7 @@ import * as monaco from "monaco-editor"
 import * as Y from "yjs"
 import { MonacoBinding } from "y-monaco"
 import { WebsocketProvider } from "y-websocket"
+import { useRoomStore } from "../../../store/useRoomStore"
 
 function CollaborationEditor({ roomId }: { roomId: string | null }) {
   const editorRef = useRef<any>(null)

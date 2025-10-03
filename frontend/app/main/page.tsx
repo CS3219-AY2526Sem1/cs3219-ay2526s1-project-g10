@@ -1,10 +1,8 @@
 import { Button } from "../../components/ui/button"
-import { Header } from "../../components/navBar/navBar"
 
 export default function MainPage() {
   return (
     <div className="min-h-screen bg-background">
-      <Header />
 
       <main className="flex-1 flex items-center justify-center px-4 sm:px-6 lg:px-8 min-h-[calc(100vh-4rem)]">
         <div className="max-w-md w-full text-center space-y-8">

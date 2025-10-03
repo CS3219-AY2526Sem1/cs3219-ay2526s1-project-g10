@@ -5,6 +5,7 @@ import ProblemDescriptionPanel from "./components/ProblemDescriptionPanel"
 // import CollaborationEditor from "./components/CollaborationEditor"
 import dynamic from "next/dynamic"
 import { useSearchParams } from "next/navigation"
+import { useRoomStore } from "../../store/useRoomStore"
 
 const mockQuestion = {
   title: "Two Sum",
@@ -33,10 +34,12 @@ const CollaborationPage = () => {
 
     const searchParams = useSearchParams();
     const roomId = searchParams.get("roomId");
+    const setRoomId = useRoomStore((state) => state.setRoomId);
 
     useEffect(() => {
         if (roomId) {
             console.log("Joining room:", roomId);
+            setRoomId(roomId);
            
         }
 
