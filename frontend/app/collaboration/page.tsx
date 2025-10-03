@@ -46,7 +46,7 @@ const CollaborationPage = () => {
     }, [roomId]);
 
     return (
-        <div className="min-h-screen bg-background">
+        <div className="min-h-screen bg-blue-100">
         <div className="flex h-screen">
           <ProblemDescriptionPanel
             title={mockQuestion.title}
