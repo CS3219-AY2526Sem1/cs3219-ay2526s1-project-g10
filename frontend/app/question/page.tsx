@@ -1,3 +1,5 @@
+"use client"
+
 import { Header } from "../../components/navBar/navBar"
 
 export default function QuestionPage() {

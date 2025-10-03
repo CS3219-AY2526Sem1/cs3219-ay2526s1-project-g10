@@ -1,4 +1,5 @@
-// frontend/components/ProblemDescriptionPanel.tsx
+"use client"
+
 type Example = {
     input: string
     output: string
