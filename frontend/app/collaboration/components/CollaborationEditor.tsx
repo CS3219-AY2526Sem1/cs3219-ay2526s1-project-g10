@@ -26,7 +26,7 @@ const LANGUAGES = [
 ]
 
 export default function CollaborationEditor({ roomId }: { roomId: string | null }) {
-  const [language, setLanguage] = useState("javascript")
+  const [language, setLanguage] = useState("python")
   const editorRef = useRef<any>(null)
   const ydocRef = useRef<Y.Doc | null>(null)
   const providerRef = useRef<WebsocketProvider | null>(null)
