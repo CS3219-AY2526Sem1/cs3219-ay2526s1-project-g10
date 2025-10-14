@@ -2,7 +2,7 @@
 let waitingUsers = [];
 
 function findMatch(user, type) {
-    return waitingUsers.find((u) => u.userId !== user.userId && u[type] === user[type]);
+    return waitingUsers.find((u) => !u.matched && u.userId !== user.userId && u[type] === user[type]);
 }
 
 
@@ -17,25 +17,36 @@ export const startMatching = async (req, res) => {
     console.log(`User ${userId} is requesting a match...`);
     console.log(`User ${userId} joined queue.`);
 
+    // immediately add to waiting queue
+    const newUser = { userId, difficulty, topic, joinedAt: Date.now(), matched: false}; 
+    waitingUsers.push(newUser);
+    console.log(`User ${userId} added to waiting queue.`);
+
     // Check for difficulty match first within 30s
     const difficultyMatch = findMatch({userId, difficulty, topic}, "difficulty");
     if (difficultyMatch) {
-        waitingUsers = waitingUsers.filter((u) => u.userId !== difficultyMatch.userId); 
+        newUser.matched = true;
+        difficultyMatch.matched = true; 
+        waitingUsers = waitingUsers.filter((u) => !u.matched); 
         console.log(`Matched ${userId} with ${difficultyMatch.userId} by difficulty!`);
         return res.json({matchFound: true, matchedWith: difficultyMatch});
     }
 
-    // If match not found, add to waiting queue
-    const newUser = { userId, difficulty, topic, joinedAt: Date.now()};
-    waitingUsers.push(newUser);
-    console.log(`User ${userId} added to waiting queue.`)
-
     setTimeout(() => {
+        const stillWaiting = waitingUsers.find(
+            (u) => u.userId === userId && !u.matched
+        );
+
+        if (!stillWaiting) {
+            return;
+        }
 
         // check difficulty for first 30s
-        const difficultyMatchAgain = findMatch({userId, difficulty, topic}, "difficulty");
+        const difficultyMatchAgain = findMatch(stillWaiting, "difficulty");
         if (difficultyMatchAgain) {
-            waitingUsers = waitingUsers.filter((u) => u.userId !== difficultyMatchAgain.userId); 
+            stillWaiting.matched = true;
+            difficultyMatchAgain.matched = true;
+            waitingUsers = waitingUsers.filter((u) => !u.matched); 
             console.log(`Matched ${userId} with ${difficultyMatchAgain.userId} by difficulty!`);
             return res.json({matchFound: true, matchedWith: difficultyMatchAgain});
         }
@@ -43,15 +54,25 @@ export const startMatching = async (req, res) => {
 
         // check for topic match in the next 30s
         setTimeout(() => {
-            const topicMatch = findMatch({userId, difficulty, topic}, "topic");
+            const stillWaiting2 = waitingUsers.find(
+                (u) => u.userId === userId && !u.matched
+            );
+            
+            if (!stillWaiting2) {
+                return;
+            }
+
+            const topicMatch = findMatch(stillWaiting2, "topic");
             if (topicMatch) {
-                waitingUsers = waitingUsers.filter((u) => u.userId !== topicMatch.userId); 
+                stillWaiting2.matched = true; 
+                topicMatch.matched = true;
+                waitingUsers = waitingUsers.filter((u) => !u.matched); 
                 console.log(`Matched ${userId} with ${topicMatch.userId} by topic!`);
                 return res.json({matchFound: true, matchedWith: topicMatch});
             }
 
             // if no match found
-            waitingUsers = waitingUsers.filter((u) => u.userId !== newUser.userId);
+            waitingUsers = waitingUsers.filter((u) => !u.matched);
             console.log(`No match found for ${userId} after 1 min.`);
             return res.json({ matchFound: false, message: "No match found" });
 
