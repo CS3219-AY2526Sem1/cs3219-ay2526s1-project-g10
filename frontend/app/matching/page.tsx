@@ -26,7 +26,8 @@ export default function MatchPage() {
 
       const data = await response.json();
       if (data.matchFound) {
-        setMatchResult(`Matched with user: ${data.matchedUserId}`);
+        const matchedUser = data.matchedWith.userId || "Unknown User";
+        setMatchResult(`Matched with user: ${matchedUser}`);
       } else {
         setMatchResult("No match found after 1 minute. Please try again later.");
       }
