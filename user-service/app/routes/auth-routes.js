@@ -1,12 +1,12 @@
 import express from "express";
-
-import { handleLogin, handleVerifyToken } from "../controller/auth-controller.js";
-import { verifyAccessToken } from "../../middleware/basic-access-control.js";
+import { verifyAuth } from "../middleware/auth-middleware.js";
+import { getProfile, updateProfile, deleteProfile } from "../controller/user-controller.js";
 
 const router = express.Router();
 
-router.post("/login", handleLogin);
-
-router.get("/verify-token", verifyAccessToken, handleVerifyToken);
+// Protected routes
+router.get("/profile", verifyAuth, getProfile);
+router.put("/profile", verifyAuth, updateProfile);
+router.delete("/profile", verifyAuth, deleteProfile);
 
 export default router;
