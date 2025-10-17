@@ -1,25 +1,39 @@
 import express from "express";
 import cors from "cors";
+import { createProxyMiddleware } from "http-proxy-middleware";
+import http from "http";
 
 const app = express();
+app.use(cors({ origin: ["http://localhost:3000"], credentials: true }));
+app.get("/healthz", (_req, res) => res.json({ ok: true }));
 
-app.use(express.json());
-app.use(cors());
+const YW_HOST = process.env.YW_HOST || "127.0.0.1";
+const YW_PORT = Number(process.env.YW_PORT || 1234);
+const YW_TARGET = `http://${YW_HOST}:${YW_PORT}`;
 
-// Health check
-app.get("/healthz", (req, res) => {
-  res.status(200).json({ status: "ok" });
-}); 
+// (Future) JWT check:
+// app.use("/collab", verifyRoomTokenMiddleware);
 
+// HTTP proxy for any REST endpoints the ws server might expose (usually none)
+app.use("/collab", createProxyMiddleware({
+  target: YW_TARGET,
+  changeOrigin: true,
+  ws: true,             
+  pathRewrite: { "^/collab": "" },
+}));
 
-// Define routes
-app.use("/api", (req, res) => {
-  res.json({ message: "Collab service is running!" });
+// Create HTTP server so we can hook WS upgrades too
+export const server = http.createServer(app);
+
+// Upgrade proxy: forward WebSocket upgrade to y-websocket
+server.on("upgrade", (req, socket, head) => {
+  // (Future) verify tokens here before allowing the upgrade.
+  // If allowed, proxy will handle the upgrade automatically because ws:true is set.
 });
 
-// Handle 404 errors
-app.use((req, res, next) => {
-  res.status(404).json({ error: "Route not found" });
-});
+const PORT = Number(process.env.PORT || 4444);
 
-export default app;
+server.listen(PORT, () => {
+  console.log(`Collab API (HTTP) on http://localhost:${PORT}`);
+  console.log(`Proxying WS at ws://localhost:${PORT}/collab  ->  ${YW_TARGET}`);
+});
