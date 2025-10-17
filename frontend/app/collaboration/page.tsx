@@ -1,6 +1,6 @@
 "use client"
 
-import { use, useEffect } from "react"
+import { use, useEffect, useRef, useState } from "react"
 import ProblemDescriptionPanel from "./components/ProblemDescriptionPanel"
 // import CollaborationEditor from "./components/CollaborationEditor"
 import dynamic from "next/dynamic"
