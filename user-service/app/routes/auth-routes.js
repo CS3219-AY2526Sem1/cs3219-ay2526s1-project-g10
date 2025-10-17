@@ -1,12 +1,12 @@
 import express from "express";
-import { verifyAuth } from "../middleware/auth-middleware.js";
-import { getProfile, updateProfile, deleteProfile } from "../controller/user-controller.js";
+import { verifyAuth } from "../../middleware/auth-middleware.js";
+import { getUser, updateUser, deleteUser } from "../controller/user-controller.js";
 
 const router = express.Router();
 
 // Protected routes
-router.get("/profile", verifyAuth, getProfile);
-router.put("/profile", verifyAuth, updateProfile);
-router.delete("/profile", verifyAuth, deleteProfile);
+router.get("/profile", verifyAuth, getUser);
+router.put("/profile", verifyAuth, updateUser);
+router.delete("/profile", verifyAuth, deleteUser);
 
 export default router;
