@@ -1,5 +1,6 @@
 import express from "express";
 import cors from "cors";
+import matchRoutes from "./routes/matchRoutes.js";
 
 const app = express();
 
@@ -13,9 +14,12 @@ app.get("/healthz", (req, res) => {
   res.status(200).json({ status: "ok" });
 }); 
 
-app.use("/api", (req, res) => {
-  res.json({ message: "Matching service is running!" });
-});
+// app.use("/api", (req, res) => {
+//   res.json({ message: "Matching service is running!" });
+// });
+
+// Request 
+app.use("/api/match", matchRoutes);
 
 // Handle 404 errors
 app.use((req, res, next) => {
