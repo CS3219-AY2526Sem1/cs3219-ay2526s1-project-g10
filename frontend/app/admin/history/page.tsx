@@ -2,22 +2,18 @@
 
 import { useState, useEffect } from "react"
 import Link from "next/link"
-import { Search, Menu, User, Folder, Clock, Eye } from "lucide-react"
-import { getUserAttempts, type Attempt } from "../../services/history"
-import { useAuth } from "../../contexts/auth-context"
+import { Search, Eye } from "lucide-react"
+import { getAllAttempts } from "../../../services/history"
 
-export default function AttemptHistoryPage() {
-  const [attempts, setAttempts] = useState<Attempt[]>([])
+export default function AdminAttemptsPage() {
+  const [attempts, setAttempts] = useState<any[]>([])
   const [searchQuery, setSearchQuery] = useState("")
   const [loading, setLoading] = useState(true)
-  const { user } = useAuth()
 
   useEffect(() => {
     const fetchData = async () => {
-      if (!user) return
-
       try {
-        const data = await getUserAttempts(user.id)
+        const data = await getAllAttempts()
         setAttempts(data)
       } catch (error) {
         console.error("Error fetching attempts:", error)
@@ -26,10 +22,12 @@ export default function AttemptHistoryPage() {
       }
     }
     fetchData()
-  }, [user])
+  }, [])
 
-  const filteredAttempts = attempts.filter((attempt) =>
-    attempt.questionTitle.toLowerCase().includes(searchQuery.toLowerCase()),
+  const filteredAttempts = attempts.filter(
+    (attempt) =>
+      attempt.userName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      attempt.questionTitle.toLowerCase().includes(searchQuery.toLowerCase()),
   )
 
   const getDifficultyColor = (difficulty: string) => {
@@ -52,76 +50,52 @@ export default function AttemptHistoryPage() {
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
-      <header className="bg-blue-100 px-6 py-4">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-6">
-            <Link href="/main" className="text-2xl font-bold text-gray-900 hover:opacity-80 transition-opacity">
-              Peer
-              <br />
-              Prep
-            </Link>
-
-            <nav className="flex items-center gap-4">
-              <Link
-                href="/matching"
-                className="flex items-center gap-2 rounded-full bg-blue-200 px-6 py-3 text-sm font-medium text-gray-900 transition-colors hover:bg-blue-300"
-              >
-                <User className="h-4 w-4" />
-                Match
-              </Link>
-              <Link
-                href="/question"
-                className="flex items-center gap-2 rounded-full bg-blue-200 px-6 py-3 text-sm font-medium text-gray-900 transition-colors hover:bg-blue-300"
-              >
-                <Folder className="h-4 w-4" />
-                Questions
-              </Link>
-              <Link
-                href="/history"
-                className="flex items-center gap-2 rounded-full bg-blue-200 px-6 py-3 text-sm font-medium text-gray-900 transition-colors hover:bg-blue-300"
-              >
-                <Clock className="h-4 w-4" />
-                Attempt History
-              </Link>
-            </nav>
-          </div>
-
-          <div className="flex items-center gap-4">
-            <div className="flex items-center gap-2 rounded-full bg-blue-200 px-6 py-3">
-              <Menu className="h-4 w-4 text-gray-700" />
-              <input
-                type="text"
-                placeholder="Search"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-48 bg-transparent text-sm text-gray-900 placeholder-gray-600 outline-none"
+      <header className="bg-blue-200 border-b border-blue-300">
+        <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
+          <Link href="/admin" className="text-2xl font-bold text-gray-900">
+            PeerPrep Admin
+          </Link>
+          <Link
+            href="/user/profile"
+            className="w-12 h-12 rounded-full bg-blue-300 border-2 border-blue-400 flex items-center justify-center hover:bg-blue-400 transition-colors"
+          >
+            <svg className="w-6 h-6 text-gray-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
               />
-              <Search className="h-4 w-4 text-gray-700" />
-            </div>
-            <Link
-              href="/user/profile"
-              className="flex h-12 w-12 items-center justify-center rounded-full border-2 border-gray-900 bg-blue-200 transition-colors hover:bg-blue-300"
-            >
-              <User className="h-6 w-6 text-gray-900" />
-            </Link>
-          </div>
+            </svg>
+          </Link>
         </div>
       </header>
 
-      {/* Main Content */}
-      <div className="mx-auto max-w-7xl px-6 py-8">
-        <h1 className="text-3xl font-bold text-gray-900 mb-8">My Attempt History</h1>
+      <main className="max-w-7xl mx-auto px-6 py-8">
+        <h1 className="text-3xl font-bold text-gray-900 mb-8">All Attempt History</h1>
+
+        {/* Search Bar */}
+        <div className="mb-6 relative">
+          <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+          <input
+            type="text"
+            placeholder="Search by user or question..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="w-full pl-12 pr-4 py-3 rounded-full border border-gray-300 focus:outline-none focus:border-blue-400 bg-white"
+          />
+        </div>
 
         {/* Attempts Table */}
-        <div className="bg-white rounded-2xl shadow-sm overflow-hidden">
+        <div className="bg-white rounded-2xl border border-gray-200 overflow-hidden">
           <table className="w-full">
             <thead className="bg-gray-50 border-b border-gray-200">
               <tr>
+                <th className="px-6 py-4 text-left text-sm font-semibold text-gray-900">User</th>
                 <th className="px-6 py-4 text-left text-sm font-semibold text-gray-900">Question</th>
                 <th className="px-6 py-4 text-left text-sm font-semibold text-gray-900">Difficulty</th>
                 <th className="px-6 py-4 text-left text-sm font-semibold text-gray-900">Status</th>
                 <th className="px-6 py-4 text-left text-sm font-semibold text-gray-900">Date</th>
-                <th className="px-6 py-4 text-left text-sm font-semibold text-gray-900">Duration</th>
                 <th className="px-6 py-4 text-left text-sm font-semibold text-gray-900">Score</th>
                 <th className="px-6 py-4 text-right text-sm font-semibold text-gray-900">Actions</th>
               </tr>
@@ -142,6 +116,7 @@ export default function AttemptHistoryPage() {
               ) : (
                 filteredAttempts.map((attempt) => (
                   <tr key={attempt.id} className="hover:bg-gray-50">
+                    <td className="px-6 py-4 text-sm text-gray-900">{attempt.userName}</td>
                     <td className="px-6 py-4 text-sm font-medium text-gray-900">{attempt.questionTitle}</td>
                     <td className="px-6 py-4">
                       <span
@@ -158,7 +133,6 @@ export default function AttemptHistoryPage() {
                       </span>
                     </td>
                     <td className="px-6 py-4 text-sm text-gray-600">{attempt.date}</td>
-                    <td className="px-6 py-4 text-sm text-gray-600">{attempt.duration}</td>
                     <td className="px-6 py-4 text-sm text-gray-600">{attempt.score}%</td>
                     <td className="px-6 py-4 text-right">
                       <button className="p-2 hover:bg-gray-100 rounded-lg transition-colors">
@@ -171,7 +145,7 @@ export default function AttemptHistoryPage() {
             </tbody>
           </table>
         </div>
-      </div>
+      </main>
     </div>
   )
 }
