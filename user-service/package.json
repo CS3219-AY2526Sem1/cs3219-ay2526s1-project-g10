@@ -14,11 +14,11 @@
   "license": "ISC",
   "devDependencies": {
     "nodemon": "^3.1.4",
-    "prisma": "^6.16.2",
+    "prisma": "^6.17.1",
     "tsx": "^4.20.5"
   },
   "dependencies": {
-    "@prisma/client": "^6.16.2",
+    "@prisma/client": "^6.17.1",
     "@prisma/extension-accelerate": "^2.0.2",
     "@supabase/supabase-js": "^2.75.0",
     "bcrypt": "^5.1.1",

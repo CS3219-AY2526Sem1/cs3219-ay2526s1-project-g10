@@ -27,12 +27,20 @@ export function SignupForm() {
     try {
       const { user } = await signup(name, email, password)
 
+      // Check if email verification is required
+      // Supabase returns user.email_confirmed_at as null if unverified
+      if (user.email_confirmed_at === null || user.email_confirmed_at === undefined) {
+        // Redirect to verification page instead of continuing
+        router.push(`/user/verify-email?email=${encodeURIComponent(email)}`)
+        return
+      }
+
       localStorage.setItem("auth_token", user.id)
       localStorage.setItem("mock_user", JSON.stringify(user))
 
       await refreshUser()
 
-      router.push("/match")
+      router.push("/matching")
     } catch (err: any) {
       setError(err.message || "Failed to create account")
     } finally {
@@ -50,7 +58,7 @@ export function SignupForm() {
         <form onSubmit={handleSubmit} className="space-y-4">
           {error && <div className="rounded-lg bg-red-50 p-3 text-sm text-red-800">{error}</div>}
           <div className="space-y-2">
-            <Label htmlFor="name">Name</Label>
+            <Label htmlFor="name">Username</Label>
             <Input
               id="name"
               type="text"

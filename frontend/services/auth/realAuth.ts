@@ -1,10 +1,10 @@
 // Real authentication service using Supabase
-import { createBrowserClient } from "@supabase/ssr"
+import { createClient } from "@supabase/supabase-js"
 
 export interface User {
   id: string
   email: string
-  name: string
+  username: string
   role: "user" | "admin"
 }
 
@@ -13,7 +13,7 @@ export interface AuthResponse {
   token: string
 }
 
-let supabaseClient: ReturnType<typeof createBrowserClient> | null = null
+let supabaseClient: ReturnType<typeof createClient> | null = null
 
 function getSupabaseClient() {
   if (!supabaseClient) {
@@ -26,7 +26,7 @@ function getSupabaseClient() {
       )
     }
 
-    supabaseClient = createBrowserClient(supabaseUrl, supabaseKey)
+    supabaseClient = createClient(supabaseUrl, supabaseKey)
   }
   return supabaseClient
 }
@@ -44,8 +44,8 @@ export async function login(email: string, password: string): Promise<AuthRespon
 
   // Fetch user profile to get role and name
   const { data: profile, error: profileError } = await supabase
-    .from("profiles")
-    .select("name, role")
+    .from("User")
+    .select("username, isAdmin")
     .eq("id", data.user.id)
     .single()
 
@@ -55,21 +55,21 @@ export async function login(email: string, password: string): Promise<AuthRespon
     user: {
       id: data.user.id,
       email: data.user.email!,
-      name: profile.name,
-      role: profile.role,
+      user: profile.user,
+      role: profile.isAdmin ? "admin" : "user",
     },
     token: data.session?.access_token || "",
   }
 }
 
-export async function signup(name: string, email: string, password: string): Promise<AuthResponse> {
+export async function signup(username: string, email: string, password: string): Promise<AuthResponse> {
   const supabase = getSupabaseClient()
 
   const { data, error } = await supabase.auth.signUp({
     email,
     password,
     options: {
-      data: { name },
+      data: { username },
     },
   })
 
@@ -77,11 +77,11 @@ export async function signup(name: string, email: string, password: string): Pro
   if (!data.user) throw new Error("No user returned")
 
   // Create profile
-  const { error: profileError } = await supabase.from("profiles").insert({
+  const { error: profileError } = await supabase.from("User").insert({
     id: data.user.id,
     email: data.user.email,
-    name,
-    role: "user",
+    username,
+    isAdmin: false,
   })
 
   if (profileError) throw profileError
@@ -90,7 +90,7 @@ export async function signup(name: string, email: string, password: string): Pro
     user: {
       id: data.user.id,
       email: data.user.email!,
-      name,
+      username,
       role: "user",
     },
     token: data.session?.access_token || "",
@@ -116,15 +116,15 @@ export async function getCurrentUser(): Promise<User | null> {
 
   if (!user) return null
 
-  const { data: profile } = await supabase.from("profiles").select("name, role").eq("id", user.id).single()
+  const { data: profile } = await supabase.from("User").select("username, isAdmin").eq("id", user.id).single()
 
   if (!profile) return null
 
   return {
     id: user.id,
     email: user.email!,
-    name: profile.name,
-    role: profile.role,
+    username: profile.username,
+    role: profile.isAdmin ? "admin" : "user",
   }
 }
 

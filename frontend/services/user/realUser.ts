@@ -10,8 +10,10 @@ export interface UserProfile {
   longestStreak: number
 }
 
+const USER_SERVICE_URL = process.env.NEXT_PUBLIC_USER_SERVICE_URL
+
 export async function getUserProfile(userId: string): Promise<UserProfile> {
-  const response = await fetch(`/api/users/${userId}`, {
+  const response = await fetch(`${USER_SERVICE_URL}/users/${userId}`, {
     headers: {
       Authorization: `Bearer ${localStorage.getItem("auth_token")}`,
     },
@@ -25,7 +27,7 @@ export async function getUserProfile(userId: string): Promise<UserProfile> {
 }
 
 export async function updateUserProfile(userId: string, updates: Partial<UserProfile>): Promise<UserProfile> {
-  const response = await fetch(`/api/users/${userId}`, {
+  const response = await fetch(`${USER_SERVICE_URL}/users/${userId}`, {
     method: "PATCH",
     headers: {
       "Content-Type": "application/json",
