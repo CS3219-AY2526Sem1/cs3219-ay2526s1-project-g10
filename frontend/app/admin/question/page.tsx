@@ -64,13 +64,13 @@ export default function AdminQuestionsPage() {
           <nav className="flex items-center gap-4">
             <Link
               href="/admin/question"
-              className="flex items-center gap-2 rounded-full bg-blue-300 px-5 py-2 text-sm font-medium text-gray-900 hover:bg-blue-400 transition-colors"
+              className="flex items-center gap-2 rounded-full bg-blue-400 px-5 py-2 text-sm font-medium text-gray-900 hover:bg-blue-400 transition-colors"
             >
               Manage Questions
             </Link>
             <Link
               href="/admin/user"
-              className="flex items-center gap-2 rounded-full bg-blue-400 px-5 py-2 text-sm font-medium text-gray-900 hover:bg-blue-400 transition-colors"
+              className="flex items-center gap-2 rounded-full bg-blue-300 px-5 py-2 text-sm font-medium text-gray-900 hover:bg-blue-400 transition-colors"
             >
               Manage Users
             </Link>
