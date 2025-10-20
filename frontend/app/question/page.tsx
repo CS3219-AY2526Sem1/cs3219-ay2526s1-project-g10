@@ -76,17 +76,6 @@ export default function QuestionsPage() {
           </div>
 
           <div className="flex items-center gap-4">
-            <div className="flex items-center gap-2 rounded-full bg-blue-200 px-6 py-3">
-              <Menu className="h-4 w-4 text-gray-700" />
-              <input
-                type="text"
-                placeholder="Search"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-48 bg-transparent text-sm text-gray-900 placeholder-gray-600 outline-none"
-              />
-              <Search className="h-4 w-4 text-gray-700" />
-            </div>
             <Link
               href="/user/profile"
               className="flex h-12 w-12 items-center justify-center rounded-full border-2 border-gray-900 bg-blue-200 transition-colors hover:bg-blue-300"
