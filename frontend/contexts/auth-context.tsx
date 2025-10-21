@@ -37,6 +37,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const signOut = async () => {
     try {
       await logout()
+      localStorage.removeItem("auth_token")
+      localStorage.removeItem("user")
       setUser(null)
     } catch (error) {
       console.error("Error signing out:", error)

@@ -24,11 +24,17 @@ export function LoginForm() {
     setError("")
 
     try {
-      const { user } = await login(email, password)
+      const { user, token } = await login(email, password)
+
+      if (!user.email_confirmed_at) {
+        setError("Please verify your email before logging in.")
+        router.push(`/user/verify-email?email=${encodeURIComponent(email)}`)
+        return
+      }
 
       // Store token for API calls
-      localStorage.setItem("auth_token", user.id)
-      localStorage.setItem("mock_user", JSON.stringify(user))
+      localStorage.setItem("auth_token", token)
+      localStorage.setItem("user", JSON.stringify(user))
 
       // Refresh user in context
       await refreshUser()
@@ -37,7 +43,7 @@ export function LoginForm() {
       if (user.role === "admin") {
         router.push("/admin")
       } else {
-        router.push("/match")
+        router.push("/main")
       }
     } catch (err: any) {
       setError(err.message || "Failed to sign in")

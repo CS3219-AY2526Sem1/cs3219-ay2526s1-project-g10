@@ -13,21 +13,30 @@ export async function GET(request: Request) {
 
     // Exchange code for session
     const { data, error } = await supabase.auth.exchangeCodeForSession(code)
+    if (error) {
+      console.error("Exchange session error:", error)
+      return NextResponse.redirect(new URL("/login", request.url))
+    }
 
-    // Create profile if this is after email verification
+    // Create profile if user exists
     if (data.user) {
       const username = data.user.user_metadata?.username || "User"
 
-      // Create profile in database
-      await supabase.from("User").upsert({
-        id: data.user.id,
-        email: data.user.email,
-        username,
-        isAdmin: false,
-      })
+      const { error: upsertError } = await supabase
+        .from("users")
+        .upsert({
+          id: data.user.id,
+          email: data.user.email,
+          username,
+          isAdmin: false,
+        })
+
+      if (upsertError) {
+        console.error("Upsert user error:", upsertError)
+      }
     }
   }
 
-  // Redirect to matching page after successful verification
+  // Redirect to main page
   return NextResponse.redirect(new URL("/main", request.url))
 }

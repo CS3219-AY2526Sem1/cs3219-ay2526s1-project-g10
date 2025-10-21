@@ -33,24 +33,29 @@ function getSupabaseClient() {
 }
 
 export async function login(email: string, password: string): Promise<AuthResponse> {
-  const supabase = getSupabaseClient()
+  const supabase = getSupabaseClient();
 
   const { data, error } = await supabase.auth.signInWithPassword({
     email,
     password,
-  })
+  });
 
-  if (error) throw error
-  if (!data.user) throw new Error("No user returned")
+  if (error) throw error;
+  if (!data.user || !data.session) throw new Error("Login failed");
 
-  // Fetch user profile to get role and username
   const { data: profile, error: profileError } = await supabase
-    .from("User")
+    .from("users")
     .select("username, isAdmin")
     .eq("id", data.user.id)
-    .single()
+    .single();
 
-  if (profileError) throw profileError
+  if (profileError || !profile) {
+    throw new Error("User profile not found. Please contact support.");
+  }
+
+  if (!data.user.email_confirmed_at) {
+    throw new Error("Please verify your email before logging in.");
+  }
 
   return {
     user: {
@@ -60,8 +65,8 @@ export async function login(email: string, password: string): Promise<AuthRespon
       role: profile.isAdmin ? "admin" : "user",
       email_confirmed_at: data.user.email_confirmed_at,
     },
-    token: data.session?.access_token || "",
-  }
+    token: data.session.access_token,
+  };
 }
 
 export async function signup(username: string, email: string, password: string): Promise<AuthResponse> {
@@ -79,9 +84,8 @@ export async function signup(username: string, email: string, password: string):
   if (error) throw error
   if (!data.user) throw new Error("No user returned")
 
-  // Only create profile if email is already verified (verification disabled)
-  if (data.user.email_confirmed_at) {
-    const { error: profileError } = await supabase.from("User").insert({
+//   if (data.user.email_confirmed_at) {
+    const { error: profileError } = await supabase.from("users").insert({
       id: data.user.id,
       email: data.user.email,
       username,
@@ -91,7 +95,7 @@ export async function signup(username: string, email: string, password: string):
     if (profileError && profileError.code !== "23505") {
       throw profileError
     }
-  }
+//   }
 
   return {
     user: {
@@ -124,7 +128,7 @@ export async function getCurrentUser(): Promise<User | null> {
 
   if (!user) return null
 
-  const { data: profile } = await supabase.from("User").select("username, isAdmin").eq("id", user.id).single()
+  const { data: profile } = await supabase.from("users").select("username, isAdmin").eq("id", user.id).single()
 
   if (!profile) return null
 
