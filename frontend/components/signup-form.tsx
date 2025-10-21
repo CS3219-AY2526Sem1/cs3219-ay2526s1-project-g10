@@ -25,18 +25,18 @@ export function SignupForm() {
     setError("")
 
     try {
-      const { user } = await signup(name, email, password)
+      const { user, token } = await signup(name, email, password)
 
       // Check if email verification is required
       // Supabase returns user.email_confirmed_at as null if unverified
-      if (user.email_confirmed_at === null || user.email_confirmed_at === undefined) {
+      if (!user.email_confirmed_at) {
         // Redirect to verification page instead of continuing
         router.push(`/user/verify-email?email=${encodeURIComponent(email)}`)
         return
       }
 
-      localStorage.setItem("auth_token", user.id)
-      localStorage.setItem("mock_user", JSON.stringify(user))
+      localStorage.setItem("auth_token", token)
+      localStorage.setItem("user", JSON.stringify(user))
 
       await refreshUser()
 

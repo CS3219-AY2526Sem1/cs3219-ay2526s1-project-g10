@@ -72,6 +72,7 @@ export async function signup(username: string, email: string, password: string):
     password,
     options: {
       data: { username },
+      emailRedirectTo: `${window.location.origin}/auth/callback`,
     },
   })
 
