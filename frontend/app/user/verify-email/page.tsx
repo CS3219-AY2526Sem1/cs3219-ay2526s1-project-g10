@@ -2,7 +2,7 @@
 
 import { useSearchParams } from "next/navigation"
 import { useState } from "react"
-import { Button } from "@/components/ui/button"
+import { Button } from "../../../components/ui/button"
 import { createClientComponentClient } from "@supabase/auth-helpers-nextjs"
 
 export default function VerifyEmailPage() {
