@@ -6,6 +6,7 @@ export interface User {
   email: string
   username: string
   role: "user" | "admin"
+  email_confirmed_at?: string | null
 }
 
 export interface AuthResponse {
@@ -42,7 +43,7 @@ export async function login(email: string, password: string): Promise<AuthRespon
   if (error) throw error
   if (!data.user) throw new Error("No user returned")
 
-  // Fetch user profile to get role and name
+  // Fetch user profile to get role and username
   const { data: profile, error: profileError } = await supabase
     .from("User")
     .select("username, isAdmin")
@@ -55,8 +56,9 @@ export async function login(email: string, password: string): Promise<AuthRespon
     user: {
       id: data.user.id,
       email: data.user.email!,
-      user: profile.user,
+      username: profile.username,
       role: profile.isAdmin ? "admin" : "user",
+      email_confirmed_at: data.user.email_confirmed_at,
     },
     token: data.session?.access_token || "",
   }
@@ -76,15 +78,19 @@ export async function signup(username: string, email: string, password: string):
   if (error) throw error
   if (!data.user) throw new Error("No user returned")
 
-  // Create profile
-  const { error: profileError } = await supabase.from("User").insert({
-    id: data.user.id,
-    email: data.user.email,
-    username,
-    isAdmin: false,
-  })
+  // Only create profile if email is already verified (verification disabled)
+  if (data.user.email_confirmed_at) {
+    const { error: profileError } = await supabase.from("User").insert({
+      id: data.user.id,
+      email: data.user.email,
+      username,
+      isAdmin: false,
+    })
 
-  if (profileError) throw profileError
+    if (profileError && profileError.code !== "23505") {
+      throw profileError
+    }
+  }
 
   return {
     user: {
@@ -92,6 +98,7 @@ export async function signup(username: string, email: string, password: string):
       email: data.user.email!,
       username,
       role: "user",
+      email_confirmed_at: data.user.email_confirmed_at,
     },
     token: data.session?.access_token || "",
   }
@@ -125,6 +132,7 @@ export async function getCurrentUser(): Promise<User | null> {
     email: user.email!,
     username: profile.username,
     role: profile.isAdmin ? "admin" : "user",
+    email_confirmed_at: user.email_confirmed_at,
   }
 }
 
