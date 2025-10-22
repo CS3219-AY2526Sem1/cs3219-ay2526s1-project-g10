@@ -5,90 +5,82 @@ export interface Question {
   difficulty: "Easy" | "Medium" | "Hard"
   topics: string[]
   description: string
+  language?: string
+}
+
+const API_URL = process.env.NEXT_PUBLIC_QUESTION_SERVICE_URL
+
+console.log("API_URL =", API_URL);
+
+function mapDifficulty(difficulty: string): "Easy" | "Medium" | "Hard" {
+  const map: Record<string, "Easy" | "Medium" | "Hard"> = {
+    EASY: "Easy",
+    MEDIUM: "Medium",
+    HARD: "Hard",
+  }
+  return map[difficulty]
+}
+
+function transformQuestion(q: any): Question {
+  return {
+    id: String(q.id),
+    title: q.title,
+    difficulty: mapDifficulty(q.difficulty),
+    topics: q.topic ? [q.topic] : [],
+    description: q.description,
+    language: q.language,
+  }
 }
 
 export async function getQuestions(filters?: {
   difficulty?: string
   search?: string
 }): Promise<Question[]> {
-  const params = new URLSearchParams()
-  if (filters?.difficulty && filters.difficulty !== "all") {
-    params.append("difficulty", filters.difficulty)
-  }
-  if (filters?.search) {
-    params.append("search", filters.search)
-  }
+  try {
+    const params = new URLSearchParams()
 
-  const response = await fetch(`/api/questions?${params}`, {
-    headers: {
-      Authorization: `Bearer ${localStorage.getItem("auth_token")}`,
-    },
-  })
+    const token = localStorage.getItem("auth_token")
 
-  if (!response.ok) {
-    throw new Error("Failed to fetch questions")
+    const response = await fetch(`${API_URL}/questions${params.toString() ? `?${params}` : ""}`, {
+      headers: {
+        ...(token && { Authorization: `Bearer ${token}` }),
+      },
+    })
+
+    if (!response.ok) {
+      throw new Error("Failed to fetch questions")
+    }
+
+    const data = await response.json()
+
+    let questions = Array.isArray(data) ? data : [data]
+
+    questions = questions.map(transformQuestion)
+
+    if (filters?.search) {
+      const searchLower = filters.search.toLowerCase()
+      questions = questions.filter((q) =>
+        q.title.toLowerCase().includes(searchLower) ||
+        q.description.toLowerCase().includes(searchLower) ||
+        q.topics.some(t => t.toLowerCase().includes(searchLower))
+      )
+    }
+
+    return questions
+  } catch (error) {
+    console.error("Error fetching questions:", error)
+    throw error
   }
-
-  return response.json()
 }
 
 export async function getQuestion(id: string): Promise<Question | null> {
-  const response = await fetch(`/api/questions/${id}`, {
-    headers: {
-      Authorization: `Bearer ${localStorage.getItem("auth_token")}`,
-    },
-  })
-
-  if (!response.ok) {
-    throw new Error("Failed to fetch question")
-  }
-
-  return response.json()
-}
-
-export async function createQuestion(question: Omit<Question, "id">): Promise<Question> {
-  const response = await fetch("/api/questions", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${localStorage.getItem("auth_token")}`,
-    },
-    body: JSON.stringify(question),
-  })
-
-  if (!response.ok) {
-    throw new Error("Failed to create question")
-  }
-
-  return response.json()
-}
-
-export async function updateQuestion(id: string, updates: Partial<Question>): Promise<Question> {
-  const response = await fetch(`/api/questions/${id}`, {
-    method: "PATCH",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${localStorage.getItem("auth_token")}`,
-    },
-    body: JSON.stringify(updates),
-  })
-
-  if (!response.ok) {
-    throw new Error("Failed to update question")
-  }
-
-  return response.json()
-}
-
-export async function deleteQuestion(id: string): Promise<void> {
-  const response = await fetch(`/api/questions/${id}`, {
-    method: "DELETE",
-    headers: {
-      Authorization: `Bearer ${localStorage.getItem("auth_token")}`,
-    },
-  })
-
-  if (!response.ok) {
-    throw new Error("Failed to delete question")
+  try {
+    const questions = await getQuestions()
+    const question = questions.find(q => q.id === id)
+    return question || null
+  } catch (error) {
+    console.error("Error fetching question:", error)
+    throw error
   }
 }
+

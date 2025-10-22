@@ -92,7 +92,7 @@ export default function QuestionsPage() {
           <h1 className="text-3xl font-bold text-gray-900">Questions</h1>
 
           {/* Difficulty Filter */}
-          <div className="flex gap-2">
+          {/*<div className="flex gap-2">
             {["all", "Easy", "Medium", "Hard"].map((diff) => (
               <button
                 key={diff}
@@ -104,7 +104,7 @@ export default function QuestionsPage() {
                 {diff === "all" ? "All" : diff}
               </button>
             ))}
-          </div>
+          </div>*/}
         </div>
 
         {loading ? (
@@ -133,7 +133,7 @@ export default function QuestionsPage() {
                     <div className="flex flex-wrap gap-2">
                       {question.topics.map((topic: string, idx: number) => (
                         <span key={idx} className="inline-flex px-3 py-1 rounded-full text-xs bg-blue-50 text-blue-700">
-                          {topic}
+                          {topic}{question.language ? ` • ${question.language}` : ""}
                         </span>
                       ))}
                     </div>
