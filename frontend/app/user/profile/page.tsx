@@ -48,7 +48,7 @@ export default function ProfilePage() {
       <header className="bg-blue-100 px-6 py-4">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-6">
-            <Link href="/match" className="text-2xl font-bold text-gray-900 hover:opacity-80 transition-opacity">
+            <Link href="/main" className="text-2xl font-bold text-gray-900 hover:opacity-80 transition-opacity">
               Peer
               <br />
               Prep
@@ -56,21 +56,21 @@ export default function ProfilePage() {
 
             <nav className="flex items-center gap-4">
               <Link
-                href="/match"
+                href="/matching"
                 className="flex items-center gap-2 rounded-full bg-blue-200 px-6 py-3 text-sm font-medium text-gray-900 transition-colors hover:bg-blue-300"
               >
                 <User className="h-4 w-4" />
                 Match
               </Link>
               <Link
-                href="/questions"
+                href="/question"
                 className="flex items-center gap-2 rounded-full bg-blue-200 px-6 py-3 text-sm font-medium text-gray-900 transition-colors hover:bg-blue-300"
               >
                 <Folder className="h-4 w-4" />
                 Questions
               </Link>
               <Link
-                href="/attempt-history"
+                href="/history"
                 className="flex items-center gap-2 rounded-full bg-blue-200 px-6 py-3 text-sm font-medium text-gray-900 transition-colors hover:bg-blue-300"
               >
                 <Clock className="h-4 w-4" />
@@ -80,15 +80,6 @@ export default function ProfilePage() {
           </div>
 
           <div className="flex items-center gap-4">
-            <div className="flex items-center gap-2 rounded-full bg-blue-200 px-6 py-3">
-              <Menu className="h-4 w-4 text-gray-700" />
-              <input
-                type="text"
-                placeholder="Search"
-                className="w-48 bg-transparent text-sm text-gray-900 placeholder-gray-600 outline-none"
-              />
-              <Search className="h-4 w-4 text-gray-700" />
-            </div>
             <Link
               href="/user/profile"
               className="flex h-12 w-12 items-center justify-center rounded-full border-2 border-gray-900 bg-blue-200 transition-colors hover:bg-blue-300"
