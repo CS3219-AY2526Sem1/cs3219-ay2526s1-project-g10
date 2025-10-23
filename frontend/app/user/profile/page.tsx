@@ -111,16 +111,16 @@ export default function ProfilePage() {
                 <div className="flex h-24 w-24 items-center justify-center rounded-full border-4 border-gray-900 bg-blue-200 mb-4">
                   <User className="h-12 w-12 text-gray-900" />
                 </div>
-                <h2 className="text-2xl font-bold text-gray-900">{profile.name}</h2>
+                <h2 className="text-2xl font-bold text-gray-900">{profile.username}</h2>
                 <p className="text-sm text-gray-600 mt-1">{profile.email}</p>
                 <span className="inline-flex px-3 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800 mt-2">
-                  {profile.role}
+                  {profile.isAdmin ? "Admin" : "User"}
                 </span>
               </div>
 
               <div className="border-t border-gray-200 pt-4 mb-4">
                 <p className="text-sm text-gray-600">
-                  <span className="font-medium text-gray-900">Joined:</span> {profile.joinedDate}
+                  <span className="font-medium text-gray-900">Joined:</span> {new Date(profile.createdAt).toLocaleDateString()}
                 </p>
               </div>
 
@@ -136,65 +136,6 @@ export default function ProfilePage() {
                   <LogOut className="h-4 w-4" />
                   Log Out
                 </button>
-              </div>
-            </div>
-          </div>
-
-          {/* Stats Cards */}
-          <div className="lg:col-span-2">
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
-              <div className="bg-white rounded-2xl p-6 shadow-sm">
-                <h3 className="text-sm font-medium text-gray-600 mb-2">Questions Completed</h3>
-                <p className="text-4xl font-bold text-gray-900">{profile.questionsCompleted}</p>
-              </div>
-
-              <div className="bg-white rounded-2xl p-6 shadow-sm">
-                <h3 className="text-sm font-medium text-gray-600 mb-2">Current Streak</h3>
-                <p className="text-4xl font-bold text-gray-900">{profile.currentStreak}</p>
-              </div>
-
-              <div className="bg-white rounded-2xl p-6 shadow-sm">
-                <h3 className="text-sm font-medium text-gray-600 mb-2">Longest Streak</h3>
-                <p className="text-4xl font-bold text-gray-900">{profile.longestStreak}</p>
-              </div>
-
-              <div className="bg-white rounded-2xl p-6 shadow-sm">
-                <h3 className="text-sm font-medium text-gray-600 mb-2">Member Since</h3>
-                <p className="text-2xl font-bold text-gray-900">{profile.joinedDate}</p>
-              </div>
-            </div>
-
-            {/* Recent Activity */}
-            <div className="bg-white rounded-2xl p-6 shadow-sm">
-              <h3 className="text-lg font-semibold text-gray-900 mb-4">Recent Activity</h3>
-              <div className="space-y-3">
-                <div className="flex items-center justify-between py-3 border-b border-gray-100">
-                  <div>
-                    <p className="text-sm font-medium text-gray-900">Completed "Two Sum"</p>
-                    <p className="text-xs text-gray-600">2 days ago</p>
-                  </div>
-                  <span className="inline-flex px-3 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                    100%
-                  </span>
-                </div>
-                <div className="flex items-center justify-between py-3 border-b border-gray-100">
-                  <div>
-                    <p className="text-sm font-medium text-gray-900">Matched with Ryan</p>
-                    <p className="text-xs text-gray-600">3 days ago</p>
-                  </div>
-                  <span className="inline-flex px-3 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-                    Match
-                  </span>
-                </div>
-                <div className="flex items-center justify-between py-3">
-                  <div>
-                    <p className="text-sm font-medium text-gray-900">Completed "Reverse Linked List"</p>
-                    <p className="text-xs text-gray-600">5 days ago</p>
-                  </div>
-                  <span className="inline-flex px-3 py-1 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
-                    85%
-                  </span>
-                </div>
               </div>
             </div>
           </div>
