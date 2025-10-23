@@ -27,8 +27,6 @@ export function SignupForm() {
     try {
       const { user, token } = await signup(name, email, password)
 
-      // Check if email verification is required
-      // Supabase returns user.email_confirmed_at as null if unverified
       if (!user.email_confirmed_at) {
         // Redirect to verification page instead of continuing
         router.push(`/user/verify-email?email=${encodeURIComponent(email)}`)

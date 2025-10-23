@@ -1,4 +1,4 @@
-// Real authentication service using Supabase
+// Real auth service using Supabase
 import { createClient } from "@supabase/supabase-js"
 
 export interface User {
@@ -84,18 +84,16 @@ export async function signup(username: string, email: string, password: string):
   if (error) throw error
   if (!data.user) throw new Error("No user returned")
 
-//   if (data.user.email_confirmed_at) {
-    const { error: profileError } = await supabase.from("users").insert({
-      id: data.user.id,
-      email: data.user.email,
-      username,
-      isAdmin: false,
-    })
+  const { error: profileError } = await supabase.from("users").insert({
+    id: data.user.id,
+    email: data.user.email,
+    username,
+    isAdmin: false,
+  })
 
-    if (profileError && profileError.code !== "23505") {
-      throw profileError
-    }
-//   }
+  if (profileError && profileError.code !== "23505") {
+    throw profileError
+  }
 
   return {
     user: {

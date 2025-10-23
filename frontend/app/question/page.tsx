@@ -90,21 +90,6 @@ export default function QuestionsPage() {
       <div className="mx-auto max-w-7xl px-6 py-8">
         <div className="mb-6 flex items-center justify-between">
           <h1 className="text-3xl font-bold text-gray-900">Questions</h1>
-
-          {/* Difficulty Filter */}
-          {/*<div className="flex gap-2">
-            {["all", "Easy", "Medium", "Hard"].map((diff) => (
-              <button
-                key={diff}
-                onClick={() => setSelectedDifficulty(diff)}
-                className={`rounded-full px-4 py-2 text-sm font-medium transition-colors ${
-                  selectedDifficulty === diff ? "bg-blue-300 text-gray-900" : "bg-white text-gray-600 hover:bg-gray-100"
-                }`}
-              >
-                {diff === "all" ? "All" : diff}
-              </button>
-            ))}
-          </div>*/}
         </div>
 
         {loading ? (
@@ -138,9 +123,6 @@ export default function QuestionsPage() {
                       ))}
                     </div>
                   </div>
-                  {/*}<button className="ml-4 rounded-full bg-blue-300 px-6 py-2.5 text-sm font-medium text-gray-900 transition-colors hover:bg-blue-400">
-                    Solve
-                  </button>*/}
                 </div>
               </div>
             ))}

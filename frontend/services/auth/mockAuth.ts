@@ -1,4 +1,4 @@
-// Mock authentication service
+// Mock auth service
 export interface User {
   id: string
   email: string
