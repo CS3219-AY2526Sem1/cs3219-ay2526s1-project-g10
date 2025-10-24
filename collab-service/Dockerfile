@@ -11,4 +11,4 @@ FROM base AS dev
 COPY . .
 
 EXPOSE 3002
-CMD ["npm", "run", "dev"]
+CMD ["npm", "run", "start"]

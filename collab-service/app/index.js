@@ -37,3 +37,5 @@ server.listen(PORT, () => {
   console.log(`Collab API (HTTP) on http://localhost:${PORT}`);
   console.log(`Proxying WS at ws://localhost:${PORT}/collab  ->  ${YW_TARGET}`);
 });
+
+app.get("/healthz", (_req, res) => res.json({ ok: true }));
