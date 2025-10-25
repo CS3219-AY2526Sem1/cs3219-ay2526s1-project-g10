@@ -10,12 +10,16 @@ export default function QuestionsPage() {
   const [searchQuery, setSearchQuery] = useState("")
   const [loading, setLoading] = useState(true)
   const [selectedDifficulty, setSelectedDifficulty] = useState<string>("all")
+  const [currentPage, setCurrentPage] = useState(1)
+  const [totalPages, setTotalPages] = useState(1)
 
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const data = await getQuestions({ difficulty: selectedDifficulty, search: searchQuery })
-        setQuestions(data)
+        setLoading(true)
+        const data = await getQuestions(currentPage, 50)
+        setQuestions(data.questions)
+        setTotalPages(data.totalPages)
       } catch (error) {
         console.error("Error fetching questions:", error)
       } finally {
@@ -23,7 +27,7 @@ export default function QuestionsPage() {
       }
     }
     fetchData()
-  }, [selectedDifficulty, searchQuery])
+  }, [currentPage])
 
   const getDifficultyColor = (difficulty: string) => {
     switch (difficulty) {
@@ -101,32 +105,53 @@ export default function QuestionsPage() {
             <p className="text-gray-600">No questions found</p>
           </div>
         ) : (
-          <div className="space-y-4">
-            {questions.map((question) => (
-              <div key={question.id} className="rounded-2xl bg-white p-6 shadow-sm hover:shadow-md transition-shadow">
-                <div className="flex items-start justify-between">
-                  <div className="flex-1">
-                    <div className="flex items-center gap-3 mb-2">
-                      <h3 className="text-xl font-semibold text-gray-900">{question.title}</h3>
-                      <span
-                        className={`inline-flex px-3 py-1 rounded-full text-xs font-medium ${getDifficultyColor(question.difficulty)}`}
-                      >
-                        {question.difficulty}
-                      </span>
-                    </div>
-                    <p className="text-sm text-gray-600 mb-3">{question.description}</p>
-                    <div className="flex flex-wrap gap-2">
-                      {question.topics.map((topic: string, idx: number) => (
-                        <span key={idx} className="inline-flex px-3 py-1 rounded-full text-xs bg-blue-50 text-blue-700">
-                          {topic}{question.language ? ` • ${question.language}` : ""}
+          <>
+            <div className="space-y-4">
+              {questions.map((question) => (
+                <div key={question.id} className="rounded-2xl bg-white p-6 shadow-sm hover:shadow-md transition-shadow">
+                  <div className="flex items-start justify-between">
+                    <div className="flex-1">
+                      <div className="flex items-center gap-3 mb-2">
+                        <h3 className="text-xl font-semibold text-gray-900">{question.title}</h3>
+                        <span
+                          className={`inline-flex px-3 py-1 rounded-full text-xs font-medium ${getDifficultyColor(question.difficulty)}`}
+                        >
+                          {question.difficulty}
                         </span>
-                      ))}
+                      </div>
+                      <p className="text-sm text-gray-600 mb-3">{question.description}</p>
+                      <div className="flex flex-wrap gap-2">
+                        {question.topics.map((topic: string, idx: number) => (
+                          <span key={idx} className="inline-flex px-3 py-1 rounded-full text-xs bg-blue-50 text-blue-700">
+                            {topic}{question.language ? ` • ${question.language}` : ""}
+                          </span>
+                        ))}
+                      </div>
                     </div>
                   </div>
                 </div>
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+            <div className="flex justify-center items-center gap-4 mt-8">
+              <button
+                disabled={currentPage === 1}
+                onClick={() => setCurrentPage((p) => p - 1)}
+                className="px-4 py-2 rounded-full bg-blue-200 hover:bg-blue-300 disabled:opacity-50"
+              >
+                Previous
+              </button>
+              <span className="text-gray-700 font-medium">
+                Page {currentPage} of {totalPages}
+              </span>
+              <button
+                disabled={currentPage === totalPages}
+                onClick={() => setCurrentPage((p) => p + 1)}
+                className="px-4 py-2 rounded-full bg-blue-200 hover:bg-blue-300 disabled:opacity-50"
+              >
+                Next
+              </button>
+            </div>
+          </>
         )}
       </div>
     </div>
