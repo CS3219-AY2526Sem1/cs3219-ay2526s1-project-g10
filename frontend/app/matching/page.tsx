@@ -6,16 +6,17 @@ import { Search, Menu, User, Folder, Clock } from "lucide-react"
 import { findMatches, matchWithUser, type MatchResult, type MatchCriteria } from "../../services/matching"
 
 export default function MatchPage() {
-  const [selectedLanguage, setSelectedLanguage] = useState<string | null>(null)
+  //const [selectedLanguage, setSelectedLanguage] = useState<string | null>(null)
   const [selectedDifficulty, setSelectedDifficulty] = useState<string | null>(null)
   const [selectedTopic, setSelectedTopic] = useState<string | null>(null)
 
   const [matchResults, setMatchResults] = useState<MatchResult[]>([])
   const [isLoading, setIsLoading] = useState(false)
 
-  const isFindMatchDisabled = !selectedLanguage || !selectedDifficulty || !selectedTopic
+  // const isFindMatchDisabled = !selectedLanguage || !selectedDifficulty || !selectedTopic
+  const isFindMatchDisabled = !selectedDifficulty || !selectedTopic
 
-  const languages = ["Java", "Python", "C"]
+  //const languages = ["Java", "Python", "C"]
   const difficulties = ["Easy", "Medium", "Hard"]
   const topics = [
     "Arrays & Strings",
@@ -43,7 +44,7 @@ export default function MatchPage() {
     setIsLoading(true)
     try {
       const criteria: MatchCriteria = {
-        languages: selectedLanguage,
+        //languages: selectedLanguage,
         difficulties: selectedDifficulty,
         topics: selectedTopic,
       }
@@ -121,7 +122,7 @@ export default function MatchPage() {
             <h2 className="mb-6 text-xl font-semibold text-gray-900">Matching Criteria</h2>
 
             {/* Programming Language */}
-            <div className="mb-6">
+            {/* <div className="mb-6">
               <h3 className="mb-3 font-medium text-gray-900">Programming Language</h3>
               <div className="space-y-2">
                 {languages.map((lang) => (
@@ -136,7 +137,7 @@ export default function MatchPage() {
                   </label>
                 ))}
               </div>
-            </div>
+            </div> */}
 
             {/* Difficulty */}
             <div className="mb-6">

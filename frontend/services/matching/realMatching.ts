@@ -6,19 +6,23 @@ export interface MatchResult {
 }
 
 export interface MatchCriteria {
-  languages: string[]
+  // languages: string[]
   difficulties: string[]
   topics: string[]
 }
 
 export async function findMatches(criteria: MatchCriteria): Promise<MatchResult[]> {
-  const response = await fetch("/api/matches", {
+  const response = await fetch("http://localhost:3003/api/match", {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
       Authorization: `Bearer ${localStorage.getItem("auth_token")}`,
     },
-    body: JSON.stringify(criteria),
+    body: JSON.stringify({
+      userId: "A123",  // later: dynamic
+      difficulty: criteria.difficulties,
+      topic: criteria.topics,
+    }),
   })
 
   if (!response.ok) {
@@ -29,7 +33,7 @@ export async function findMatches(criteria: MatchCriteria): Promise<MatchResult[
 }
 
 export async function matchWithUser(userId: string): Promise<void> {
-  const response = await fetch(`/api/matches/${userId}`, {
+  const response = await fetch(`http://localhost:3003/api/match/${userId}`, {
     method: "POST",
     headers: {
       Authorization: `Bearer ${localStorage.getItem("auth_token")}`,
