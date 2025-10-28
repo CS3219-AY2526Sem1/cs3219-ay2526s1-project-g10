@@ -1,4 +1,10 @@
 import redis from "../redisClient.js";
+import { createClient } from "@supabase/supabase-js";
+
+const supabase = createClient(
+  process.env.SUPABASE_URL,
+  process.env.SUPABASE_SERVICE_ROLE_KEY
+);
 
 // Helper: find a compatible match
 async function findMatch(user, type) {
@@ -51,9 +57,25 @@ async function findBestMatch(user) {
 async function handleMatch(userId, partner) {
    const allUsers = (await redis.lrange("waitingUsers", 0, -1)).map((u) => JSON.parse(u));
 
+   const { data: userData } = await supabase
+      .from('users')
+      .select('username')
+      .eq('id', userId)
+      .single();
+
+   const { data: partnerData } = await supabase
+      .from('users')
+      .select('username')
+      .eq('id', partner.userId)
+      .single();
+
+   const username = userData?.username || `User ${userId}`;
+   const partnerUsername = partnerData?.username || `User ${partner.userId}`;
+
    await redis.setex(`match:${userId}`, 60, JSON.stringify({
           matchedWith: {
               userId: partner.userId,
+              username: partnerUsername,
               difficulty: partner.difficulty,
               topic: partner.topic,
               joinedAt: partner.joinedAt,
@@ -65,6 +87,7 @@ async function handleMatch(userId, partner) {
       await redis.setex(`match:${partner.userId}`, 60, JSON.stringify({
           matchedWith: {
               userId: userId,
+              username: username,
               difficulty: partner.difficulty,
               topic: partner.topic,
               joinedAt: Date.now(),

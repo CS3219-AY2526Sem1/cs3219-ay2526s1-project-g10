@@ -10,6 +10,7 @@ const supabase = createClient(
 export interface MatchResult {
   id: string
   name: string
+  username?: string
   avatar?: string
 }
 
@@ -85,7 +86,8 @@ export async function findMatches(
       return [
         {
           id: initialResponse.matchedWith.userId,
-          name: `User ${initialResponse.matchedWith.userId}`,
+          name: initialResponse.matchedWith.username || `User ${initialResponse.matchedWith.userId}`,
+          username: initialResponse.matchedWith.username,
           avatar: "",
         },
       ]
@@ -115,7 +117,8 @@ export async function findMatches(
         return [
           {
             id: checkResponse.matchedWith.userId,
-            name: `User ${checkResponse.matchedWith.userId}`,
+            name: checkResponse.matchedWith.username || `User ${checkResponse.matchedWith.userId}`,
+            username: checkResponse.matchedWith.username,
             avatar: "",
           },
         ]
