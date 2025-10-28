@@ -1,4 +1,5 @@
 import redis from "../redisClient.js";
+import { addToQueue } from "../rabbitmqClient.js";
 
 // Helper: find a compatible match
 async function findMatch(user, type) {
@@ -32,13 +33,27 @@ async function handleMatch(userId, partner) {
      }
    }
     const remainderUsers = allUsers.filter((u) => !u.matched);
-   await updateWaitingUsers(remainderUsers);
+    await updateWaitingUsers(remainderUsers);
+
     console.log(`Updated waiting queue with ${remainderUsers.length} users.`);
-   console.log(`Matched ${userId} with ${partner.userId}!`);
- }
+    console.log(`Matched ${userId} with ${partner.userId}!`);
 
+    // Notify other services via RabbitMQ
+    const matchInfo = {
+       user1: userId,
+       user2: partner.userId,
+       difficulty: partner.difficulty,
+       topic: partner.topic,
+       matchedAt: new Date().toISOString()
+    }; 
 
-
+    try {
+        await addToQueue("match_queue", matchInfo);
+        console.log("Match info sent to RabbitMQ:", matchInfo);
+    } catch (error) {
+        console.error("Failed to send match info to RabbitMQ:", error);
+    }
+}
 
 export const startMatching = async (req, res) => {
    console.log("Matching started...");
