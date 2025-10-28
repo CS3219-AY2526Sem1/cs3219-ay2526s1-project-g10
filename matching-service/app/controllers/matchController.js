@@ -24,7 +24,7 @@ async function isStillWaiting(userId) {
 }
 
 
-async function handleMatch(userId, partner) {
+async function handleMatch(userId, partner, matchedOn) {
    const allUsers = (await redis.lrange("waitingUsers", 0, -1)).map((u) => JSON.parse(u));
     for (const u of allUsers) {
      if (!u) continue;
@@ -42,8 +42,11 @@ async function handleMatch(userId, partner) {
     const matchInfo = {
        user1: userId,
        user2: partner.userId,
-       difficulty: partner.difficulty,
-       topic: partner.topic,
+       user1Difficulty: allUsers.find(u => u.userId === userId)?.difficulty || "unknown",
+       user2Difficulty: partner.difficulty,
+       user1Topic: allUsers.find(u => u.userId === userId)?.topic || "unknown",
+       user2topic: partner.topic,
+       matchedOn, 
        matchedAt: new Date().toISOString()
     }; 
 
@@ -80,7 +83,7 @@ export const startMatching = async (req, res) => {
    if (difficultyMatch) {
        newUser.matched = true;
        difficultyMatch.matched = true;
-       await handleMatch(userId, difficultyMatch);
+       await handleMatch(userId, difficultyMatch, "difficulty");
        return res.json({matchFound: true, matchedWith: difficultyMatch});
    }
 
@@ -92,7 +95,7 @@ export const startMatching = async (req, res) => {
        if (difficultyMatchAgain) {
            newUser.matched = true;
            difficultyMatchAgain.matched = true;
-           await handleMatch(userId, difficultyMatchAgain);
+           await handleMatch(userId, difficultyMatchAgain, "difficulty");
            return res.json({matchFound: true, matchedWith: difficultyMatchAgain});
        }
   
@@ -105,7 +108,7 @@ export const startMatching = async (req, res) => {
            if (topicMatch) {
                newUser.matched = true;
                topicMatch.matched = true;
-               await handleMatch(userId, topicMatch);
+               await handleMatch(userId, topicMatch, "topic");
                return res.json({matchFound: true, matchedWith: topicMatch});
            }
 
