@@ -121,8 +121,12 @@ export const startMatching = async (req, res) => {
 
 
             console.log(`No match found for ${userId} after 1 min.`);
-            return res.json({ matchFound: false, message: "No match found" });
 
+            // Clean up: remove user from waiting queue
+            await redis.lrem("waitingUsers", 0, JSON.stringify(newUser));
+            console.log(`Removed stale entry for ${userId} after 1 min.`);
+
+            return res.json({ matchFound: false, message: "No match found" });
 
         }, 30000)
     }, 30000)
