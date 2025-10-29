@@ -15,7 +15,7 @@ services:
   matching-service:
     build: ./matching-service
     ports:
-      - "3003:3003"
+      - "3002:3002"
     env_file:
       - ./matching-service/.env
     healthcheck:
@@ -27,7 +27,7 @@ services:
   question-service:
     build: ./question-service
     ports:
-      - "3002:3002"
+      - "3003:3003"
     env_file:
       - ./question-service/.env
     healthcheck:

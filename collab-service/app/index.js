@@ -31,7 +31,7 @@ server.on("upgrade", (req, socket, head) => {
   // If allowed, proxy will handle the upgrade automatically because ws:true is set.
 });
 
-const PORT = Number(process.env.PORT || 4444);
+const PORT = Number(process.env.PORT || 3004);
 
 server.listen(PORT, () => {
   console.log(`Collab API (HTTP) on http://localhost:${PORT}`);
