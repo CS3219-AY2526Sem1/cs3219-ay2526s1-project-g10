@@ -4,6 +4,7 @@ import { useState } from "react"
 import Link from "next/link"
 import { Search, Menu, User, Folder, Clock } from "lucide-react"
 import { findMatches, matchWithUser, type MatchResult, type MatchCriteria } from "../../services/matching"
+import { useRouter } from 'next/navigation'
 
 export default function MatchPage() {
   //const [selectedLanguage, setSelectedLanguage] = useState<string | null>(null)
@@ -12,9 +13,11 @@ export default function MatchPage() {
 
   const [matchResults, setMatchResults] = useState<MatchResult[]>([])
   const [isLoading, setIsLoading] = useState(false)
+  const [searchMessage, setSearchMessage] = useState<string>("")
 
   // const isFindMatchDisabled = !selectedLanguage || !selectedDifficulty || !selectedTopic
   const isFindMatchDisabled = !selectedDifficulty || !selectedTopic
+  const router = useRouter()
 
   //const languages = ["Java", "Python", "C"]
   const difficulties = ["Easy", "Medium", "Hard"]
@@ -41,26 +44,38 @@ export default function MatchPage() {
   }
 
   const handleFindMatch = async () => {
-    setIsLoading(true)
-    try {
-      const criteria: MatchCriteria = {
-        //languages: selectedLanguage,
-        difficulties: selectedDifficulty,
-        topics: selectedTopic,
+      setIsLoading(true)
+      setSearchMessage("Searching for match...")
+      setMatchResults([]) // Clear previous results
+
+      try {
+        const criteria: MatchCriteria = {
+          difficulties: selectedDifficulty,
+          topics: selectedTopic,
+        }
+        const results = await findMatches(criteria, (msg) => {
+          setSearchMessage(msg)
+        })
+        setMatchResults(results)
+
+        if (results.length > 0) {
+          setSearchMessage("Match found!")
+        } else {
+          setSearchMessage("No match found. Try different criteria.")
+        }
+      } catch (error) {
+        console.error("Error fetching matches:", error)
+        setSearchMessage("Error occurred. Please try again.")
+      } finally {
+        setIsLoading(false)
       }
-      const results = await findMatches(criteria)
-      setMatchResults(results)
-    } catch (error) {
-      console.error("Error fetching matches:", error)
-    } finally {
-      setIsLoading(false)
     }
-  }
 
   const handleMatchNow = async (userId: string) => {
     try {
       await matchWithUser(userId)
       alert(`Matched with user ${userId}!`)
+      router.push('/collaboration')
     } catch (error) {
       console.error("Error matching with user:", error)
     }
@@ -198,7 +213,7 @@ export default function MatchPage() {
             <h2 className="mb-6 text-2xl font-semibold text-gray-900">Matching Results</h2>
             {isLoading ? (
               <div className="rounded-2xl bg-white p-12 text-center shadow-sm">
-                <p className="text-gray-600">Finding matches...</p>
+                <p className="text-gray-600">{searchMessage}</p>
               </div>
             ) : matchResults.length > 0 ? (
               <div className="space-y-4">
@@ -220,9 +235,9 @@ export default function MatchPage() {
                 ))}
               </div>
             ) : (
-              <div className="rounded-2xl bg-white p-12 text-center shadow-sm">
-                <p className="text-gray-600">No matches found. Select criteria and click "FIND MATCH" to search.</p>
-              </div>
+              <p className="text-gray-600">
+                {searchMessage || "No matches found. Select criteria and click 'FIND MATCH' to search."}
+              </p>
             )}
           </div>
         </div>

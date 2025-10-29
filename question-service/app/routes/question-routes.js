@@ -6,7 +6,7 @@ const prisma = new PrismaClient();
 
 // GET /questions - Retrieve all questions
 router.get("/", async (req, res) => {
-    const {difficulty, topic} = req.query;
+    const {difficulty, topic, page = 1, limit = 100} = req.query;
     let questions;
 
     try {
@@ -29,8 +29,21 @@ router.get("/", async (req, res) => {
 
         } else {
             // If no filters, return the first 100 questions
-            questions = await prisma.question.findMany({take: 100});
-            res.json(questions);
+//            questions = await prisma.question.findMany({take: 100});
+//            res.json(questions);
+            const pageNum = parseInt(page);
+            const limitNum = parseInt(limit);
+            const skip = (pageNum - 1) * limitNum;
+
+            const totalCount = await prisma.question.count();
+            questions = await prisma.question.findMany({skip, take: limitNum});
+
+            return res.json({
+              questions,
+              totalCount,
+              totalPages: Math.ceil(totalCount / limitNum),
+              currentPage: pageNum,
+            });
         }
     } catch (error) {
         console.error("Error fetching questions:", error);

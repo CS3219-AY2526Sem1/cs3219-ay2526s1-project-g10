@@ -1,5 +1,5 @@
 import express from "express";
-import { startMatching } from "../controllers/matchController.js";
+import { startMatching, confirmMatch } from "../controllers/matchController.js";
 
 const router = express.Router();
 
@@ -9,6 +9,7 @@ const router = express.Router();
 //   });
 
 router.post("/", startMatching);
+router.post("/:userId", confirmMatch);
   
 export default router;
   
