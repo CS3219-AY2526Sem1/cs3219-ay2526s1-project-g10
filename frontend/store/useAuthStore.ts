@@ -1,3 +1,5 @@
+"use client"
+
 import { create } from "zustand"
 import { createJSONStorage, persist } from "zustand/middleware"
 import { getCurrentUser, logout } from "../services/auth"
@@ -14,8 +16,10 @@ interface AuthState {
   signOut: () => Promise<void>
 }
 
+type AuthPersistedState = Pick<AuthState, "user" | "isAdmin">
+
 export const useAuthStore = create<AuthState>()(
-  persist(
+  persist<AuthState, [], [], AuthPersistedState>(
     (set, get) => ({
       user: null as AuthUser,
       loading: true,
@@ -59,17 +63,12 @@ export const useAuthStore = create<AuthState>()(
     }),
     {
       name: "auth-store",
-      storage: typeof window !== "undefined" ? createJSONStorage<AuthState>(() => window.localStorage) : undefined,
-      partialize: (state) =>
-        ({
-          user: state.user,
-          isAdmin: state.isAdmin,
-          loading: false,
-          initialized: state.initialized,
-          refreshUser: state.refreshUser,
-          initialize: state.initialize,
-          signOut: state.signOut,
-        }) as AuthState,
+      storage:
+        typeof window !== "undefined" ? createJSONStorage<AuthPersistedState>(() => window.localStorage) : undefined,
+      partialize: (state) => ({
+        user: state.user,
+        isAdmin: state.isAdmin,
+      }),
     }
   )
 )

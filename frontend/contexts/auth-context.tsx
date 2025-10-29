@@ -1,7 +1,7 @@
 "use client"
 
 import type React from "react"
-import { useEffect } from "react"
+import { useEffect, useMemo } from "react"
 import { useAuthStore } from "../store/useAuthStore"
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
@@ -15,13 +15,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 }
 
 export function useAuth() {
-  return useAuthStore((state) => ({
-    user: state.user,
-    loading: state.loading,
-    signOut: state.signOut,
-    isAdmin: state.isAdmin,
-    refreshUser: state.refreshUser,
-  }))
+  const user = useAuthStore((state) => state.user)
+  const loading = useAuthStore((state) => state.loading)
+  const signOut = useAuthStore((state) => state.signOut)
+  const isAdmin = useAuthStore((state) => state.isAdmin)
+  const refreshUser = useAuthStore((state) => state.refreshUser)
+
+  return useMemo(
+    () => ({ user, loading, signOut, isAdmin, refreshUser }),
+    [user, loading, signOut, isAdmin, refreshUser]
+  )
 }
 
 export { useAuthStore }
