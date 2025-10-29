@@ -1,29 +1,30 @@
 import redis from "../redisClient.js";
+import { addToQueue } from "../rabbitmqClient.js";
 
 // Helper: find a compatible match
 async function findMatch(user, type) {
-   const users = (await redis.lrange("waitingUsers", 0, -1)).map((u) => JSON.parse(u));
-   return users.find((u) => !u.matched && u.userId !== user.userId && u[type] === user[type]);
+    const users = (await redis.lrange("waitingUsers", 0, -1)).map((u) => JSON.parse(u));
+    return users.find((u) => !u.matched && u.userId !== user.userId && u[type] === user[type]);
 }
 
 
 // Helper: update Redis queue
 async function updateWaitingUsers(remainderUsers) {
-   await redis.del("waitingUsers");
-   for (const user of remainderUsers) {
-       await redis.rpush("waitingUsers", JSON.stringify(user));
-   }
+    await redis.del("waitingUsers");
+    for (const user of remainderUsers) {
+        await redis.rpush("waitingUsers", JSON.stringify(user));
+    }
 }
 
 
 // Helper: check if a user is still waiting (not matched)
 async function isStillWaiting(userId) {
-   const allUsers = (await redis.lrange("waitingUsers", 0, -1)).map((u) => JSON.parse(u));
-   return allUsers.some((u) => u.userId === userId && !u.matched);
+    const allUsers = (await redis.lrange("waitingUsers", 0, -1)).map((u) => JSON.parse(u));
+    return allUsers.some((u) => u.userId === userId && !u.matched);
 }
 
 
-async function handleMatch(userId, partner) {
+async function handleMatch(userId, partner, matchedOn) {
    const allUsers = (await redis.lrange("waitingUsers", 0, -1)).map((u) => JSON.parse(u));
     for (const u of allUsers) {
      if (!u) continue;
@@ -32,73 +33,101 @@ async function handleMatch(userId, partner) {
      }
    }
     const remainderUsers = allUsers.filter((u) => !u.matched);
-   await updateWaitingUsers(remainderUsers);
+    await updateWaitingUsers(remainderUsers);
+
     console.log(`Updated waiting queue with ${remainderUsers.length} users.`);
-   console.log(`Matched ${userId} with ${partner.userId}!`);
- }
+    console.log(`Matched ${userId} with ${partner.userId}!`);
 
+    // Notify other services via RabbitMQ
+    const matchInfo = {
+       user1: userId,
+       user2: partner.userId,
+       user1Difficulty: allUsers.find(u => u.userId === userId)?.difficulty || "unknown",
+       user2Difficulty: partner.difficulty,
+       user1Topic: allUsers.find(u => u.userId === userId)?.topic || "unknown",
+       user2topic: partner.topic,
+       matchedOn, 
+       matchedAt: new Date().toISOString()
+    }; 
 
-
+    try {
+        await addToQueue("match_queue", matchInfo);
+        console.log("Match info sent to RabbitMQ:", matchInfo);
+    } catch (error) {
+        console.error("Failed to send match info to RabbitMQ:", error);
+    }
+}
 
 export const startMatching = async (req, res) => {
-   console.log("Matching started...");
+    console.log("Matching started...");
 
 
-   const { userId, difficulty, topic } = req.body;
-   if (!userId || !difficulty || !topic) {
-       return res.status(400).json( { error: "Missing fields in request body"} );
-   }
+    const { userId, difficulty, topic } = req.body;
+    if (!userId || !difficulty || !topic) {
+        return res.status(400).json( { error: "Missing fields in request body"} );
+    }
 
 
-   console.log(`User ${userId} is requesting a match...`);
-   console.log(`User ${userId} joined queue.`);
+    console.log(`User ${userId} is requesting a match...`);
+    console.log(`User ${userId} joined queue.`);
+
+    const existingUsers = await redis.lrange("waitingUsers", 0, -1);
+    const duplicateString = existingUsers.find((u) => JSON.parse(u).userId === userId);
+
+    if (duplicateString) {
+        await redis.lrem("waitingUsers", 1, existingUsers[duplicateString]);
+        console.log(`Removed duplicate entry for user ${userId} from waiting queue.`);
+    }
+
+    // immediately add to waiting queue
+    const newUser = { userId, difficulty, topic, joinedAt: Date.now(), matched: false};
+    await redis.rpush("waitingUsers", JSON.stringify(newUser));
+    console.log(`User ${userId} added to waiting queue.`);
 
 
-   // immediately add to waiting queue
-   const newUser = { userId, difficulty, topic, joinedAt: Date.now(), matched: false};
-   await redis.rpush("waitingUsers", JSON.stringify(newUser));
-   console.log(`User ${userId} added to waiting queue.`);
+    // Check for difficulty match first within 30s
+    const difficultyMatch = await findMatch({userId, difficulty, topic}, "difficulty");
+    if (difficultyMatch) {
+        newUser.matched = true;
+        difficultyMatch.matched = true;
+        await handleMatch(userId, difficultyMatch, "difficulty");
+        return res.json({matchFound: true, matchedWith: difficultyMatch});
+    }
 
 
-   // Check for difficulty match first within 30s
-   const difficultyMatch = await findMatch({userId, difficulty, topic}, "difficulty");
-   if (difficultyMatch) {
-       newUser.matched = true;
-       difficultyMatch.matched = true;
-       await handleMatch(userId, difficultyMatch);
-       return res.json({matchFound: true, matchedWith: difficultyMatch});
-   }
+    setTimeout(async () => {
+        if (!(await isStillWaiting(userId))) return; // if matched alrdy, do not continue.
+        // check difficulty for first 30s
+        const difficultyMatchAgain = await findMatch(newUser, "difficulty");
+        if (difficultyMatchAgain) {
+            newUser.matched = true;
+            difficultyMatchAgain.matched = true;
+            await handleMatch(userId, difficultyMatchAgain, "difficulty");
+            return res.json({matchFound: true, matchedWith: difficultyMatchAgain});
+        }
+    
 
 
-   setTimeout(async () => {
-       if (!(await isStillWaiting(userId))) return; // if matched alrdy, do not continue.
-       // check difficulty for first 30s
-       const difficultyMatchAgain = await findMatch(newUser, "difficulty");
-       if (difficultyMatchAgain) {
-           newUser.matched = true;
-           difficultyMatchAgain.matched = true;
-           await handleMatch(userId, difficultyMatchAgain);
-           return res.json({matchFound: true, matchedWith: difficultyMatchAgain});
-       }
-  
+        // check for topic match in the next 30s
+        setTimeout(async () => {
+            if (!(await isStillWaiting(userId))) return;
+            const topicMatch = await findMatch(newUser, "topic");
+            if (topicMatch) {
+                newUser.matched = true;
+                topicMatch.matched = true;
+                await handleMatch(userId, topicMatch, "topic");
+                return res.json({matchFound: true, matchedWith: topicMatch});
+            }
 
 
-       // check for topic match in the next 30s
-       setTimeout(async () => {
-           if (!(await isStillWaiting(userId))) return;
-           const topicMatch = await findMatch(newUser, "topic");
-           if (topicMatch) {
-               newUser.matched = true;
-               topicMatch.matched = true;
-               await handleMatch(userId, topicMatch);
-               return res.json({matchFound: true, matchedWith: topicMatch});
-           }
+            console.log(`No match found for ${userId} after 1 min.`);
 
+            // Clean up: remove user from waiting queue
+            await redis.lrem("waitingUsers", 0, JSON.stringify(newUser));
+            console.log(`Removed stale entry for ${userId} after 1 min.`);
 
-           console.log(`No match found for ${userId} after 1 min.`);
-           return res.json({ matchFound: false, message: "No match found" });
+            return res.json({ matchFound: false, message: "No match found" });
 
-
-       }, 30000)
-   }, 30000)
+        }, 30000)
+    }, 30000)
 };
