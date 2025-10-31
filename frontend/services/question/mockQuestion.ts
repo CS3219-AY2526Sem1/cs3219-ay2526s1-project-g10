@@ -5,6 +5,7 @@ export interface Question {
   difficulty: "Easy" | "Medium" | "Hard"
   topics: string[]
   description: string
+  language?: string
 }
 
 const MOCK_QUESTIONS: Question[] = [
@@ -14,6 +15,7 @@ const MOCK_QUESTIONS: Question[] = [
     difficulty: "Easy",
     topics: ["Arrays", "Hash Table"],
     description: "Given an array of integers, return indices of the two numbers that add up to a specific target.",
+    language: "python",
   },
   {
     id: "2",
@@ -21,13 +23,15 @@ const MOCK_QUESTIONS: Question[] = [
     difficulty: "Medium",
     topics: ["Linked Lists"],
     description: "Reverse a singly linked list.",
-  },
+    language: "python",
+    },
   {
     id: "3",
     title: "Binary Tree Maximum Path Sum",
     difficulty: "Hard",
     topics: ["Trees", "Dynamic Programming"],
     description: "Find the maximum path sum in a binary tree.",
+    language: "python",
   },
 ]
 
