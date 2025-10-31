@@ -21,20 +21,20 @@ export default function MainPage() {
           </div>
 
           <div className="pt-4 flex justify-center gap-4">
-            <a href="/history">
+            {/* <a href="/history">
               <Button
                 size="lg"
                 className="bg-secondary hover:bg-secondary/90 text-secondary-foreground px-12 py-4 text-lg font-semibold rounded-lg shadow-lg hover:shadow-xl transition-all duration-200 transform hover:scale-105"
               >
                 View Attempt History
               </Button>
-            </a>
+            </a> */}
             <a href="/matching">
               <Button
                 size="lg"
                 className="bg-secondary hover:bg-secondary/90 text-secondary-foreground px-12 py-4 text-lg font-semibold rounded-lg shadow-lg hover:shadow-xl transition-all duration-200 transform hover:scale-105"
               >
-                Start Matching
+                Start Matching!
               </Button>
             </a>
           </div>

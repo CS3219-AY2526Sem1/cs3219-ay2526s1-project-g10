@@ -1,4 +1,3 @@
-// Real auth service using Supabase
 import { createClient } from "@supabase/supabase-js"
 
 export interface User {
@@ -14,47 +13,32 @@ export interface AuthResponse {
   token: string
 }
 
-let supabaseClient: ReturnType<typeof createClient> | null = null
-
-function getSupabaseClient() {
-  if (!supabaseClient) {
-    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
-    const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
-
-    if (!supabaseUrl || !supabaseKey) {
-      throw new Error(
-        "Supabase credentials are missing. Please add NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY to your environment variables.",
-      )
-    }
-
-    supabaseClient = createClient(supabaseUrl, supabaseKey)
-  }
-  return supabaseClient
-}
+const supabaseClient = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+)
 
 export async function login(email: string, password: string): Promise<AuthResponse> {
-  const supabase = getSupabaseClient();
-
-  const { data, error } = await supabase.auth.signInWithPassword({
+  const { data, error } = await supabaseClient.auth.signInWithPassword({
     email,
     password,
-  });
+  })
 
-  if (error) throw error;
-  if (!data.user || !data.session) throw new Error("Login failed");
+  if (error) throw error
+  if (!data.user || !data.session) throw new Error("Login failed")
 
-  const { data: profile, error: profileError } = await supabase
+  const { data: profile, error: profileError } = await supabaseClient
     .from("users")
     .select("username, isAdmin")
     .eq("id", data.user.id)
-    .single();
+    .single()
 
   if (profileError || !profile) {
-    throw new Error("User profile not found. Please contact support.");
+    throw new Error("User profile not found. Please contact support.")
   }
 
   if (!data.user.email_confirmed_at) {
-    throw new Error("Please verify your email before logging in.");
+    throw new Error("Please verify your email before logging in.")
   }
 
   return {
@@ -66,13 +50,11 @@ export async function login(email: string, password: string): Promise<AuthRespon
       email_confirmed_at: data.user.email_confirmed_at,
     },
     token: data.session.access_token,
-  };
+  }
 }
 
 export async function signup(username: string, email: string, password: string): Promise<AuthResponse> {
-  const supabase = getSupabaseClient()
-
-  const { data, error } = await supabase.auth.signUp({
+  const { data, error } = await supabaseClient.auth.signUp({
     email,
     password,
     options: {
@@ -84,7 +66,7 @@ export async function signup(username: string, email: string, password: string):
   if (error) throw error
   if (!data.user) throw new Error("No user returned")
 
-  const { error: profileError } = await supabase.from("users").insert({
+  const { error: profileError } = await supabaseClient.from("users").insert({
     id: data.user.id,
     email: data.user.email,
     username,
@@ -108,9 +90,7 @@ export async function signup(username: string, email: string, password: string):
 }
 
 export async function forgotPassword(email: string): Promise<void> {
-  const supabase = getSupabaseClient()
-
-  const { error } = await supabase.auth.resetPasswordForEmail(email, {
+  const { error } = await supabaseClient.auth.resetPasswordForEmail(email, {
     redirectTo: `${window.location.origin}/user/reset-password`,
   })
 
@@ -118,15 +98,13 @@ export async function forgotPassword(email: string): Promise<void> {
 }
 
 export async function getCurrentUser(): Promise<User | null> {
-  const supabase = getSupabaseClient()
-
   const {
     data: { user },
-  } = await supabase.auth.getUser()
+  } = await supabaseClient.auth.getUser()
 
   if (!user) return null
 
-  const { data: profile } = await supabase.from("users").select("username, isAdmin").eq("id", user.id).single()
+  const { data: profile } = await supabaseClient.from("users").select("username, isAdmin").eq("id", user.id).single()
 
   if (!profile) return null
 
@@ -140,8 +118,6 @@ export async function getCurrentUser(): Promise<User | null> {
 }
 
 export async function logout(): Promise<void> {
-  const supabase = getSupabaseClient()
-
-  const { error } = await supabase.auth.signOut()
+  const { error } = await supabaseClient.auth.signOut()
   if (error) throw error
 }

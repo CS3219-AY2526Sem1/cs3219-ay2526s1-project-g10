@@ -2,11 +2,12 @@
 
 import type React from "react"
 import { useState } from "react"
+import { isAxiosError } from "axios"
 import { Button } from "../components/ui/button"
 import { Input } from "../components/ui/input"
 import { Label } from "../components/ui/label"
 import Link from "next/link"
-import { useRouter } from "next/navigation"
+import { useRouter, useSearchParams } from "next/navigation"
 import { login } from "../services/auth"
 import { useAuth } from "../contexts/auth-context"
 
@@ -16,6 +17,7 @@ export function LoginForm() {
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState("")
   const router = useRouter()
+  const searchParams = useSearchParams()
   const { refreshUser } = useAuth()
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -40,13 +42,26 @@ export function LoginForm() {
       await refreshUser()
 
       // Redirect based on role
-      if (user.role === "admin") {
-        router.push("/admin")
+      const next = searchParams?.get("next")
+      if (next) {
+        router.replace(next)
+      } else if (user.role === "admin") {
+        router.replace("/admin")
       } else {
-        router.push("/main")
+        router.replace("/main")
       }
-    } catch (err: any) {
-      setError(err.message || "Failed to sign in")
+    } catch (err) {
+      console.error(err)
+      if (isAxiosError(err)) {
+        const message = (err.response?.data as { message?: string } | undefined)?.message ?? err.message
+        setError(message || "Failed to sign in")
+
+      } else if (err instanceof Error) {
+        setError(err.message)
+        console.error(err)
+      } else {
+        setError("Failed to sign in")
+      }
     } finally {
       setIsLoading(false)
     }
