@@ -54,7 +54,7 @@ export default function VerifyEmailPage() {
           <span className="font-medium text-foreground">{email}</span>
         </p>
         <p className="text-sm text-muted-foreground mb-6">
-          Click the link in the email to verify your account and complete signup.
+          Click the link in the email to verify your email address.
         </p>
 
         {message && (

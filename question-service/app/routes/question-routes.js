@@ -1,11 +1,12 @@
 import express from "express";
 import {PrismaClient} from '../../generated/prisma/index.js';
+import { verifyAuth } from '../../middleware/auth-middleware.js';
 
 const router = express.Router();
 const prisma = new PrismaClient();
 
 // GET /questions - Retrieve all questions
-router.get("/", async (req, res) => {
+router.get("/", verifyAuth, async (req, res) => {
     const {difficulty, topic, page = 1, limit = 100} = req.query;
     let questions;
 
