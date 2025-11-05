@@ -1,10 +1,9 @@
 "use client"
 
 import { useState } from "react"
-import Link from "next/link"
-import { Search, Menu, User, Folder, Clock } from "lucide-react"
 import { findMatches, matchWithUser, type MatchResult, type MatchCriteria } from "../../services/matching"
-import { useRouter } from 'next/navigation'
+import { useRouter } from "next/navigation"
+import { AppHeader } from "../../components/navigation/AppHeader"
 
 export default function MatchPage() {
   //const [selectedLanguage, setSelectedLanguage] = useState<string | null>(null)
@@ -83,51 +82,7 @@ export default function MatchPage() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* Header */}
-      <header className="bg-blue-100 px-6 py-4">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-6">
-            <Link href="/main" className="text-2xl font-bold text-gray-900 hover:opacity-80 transition-opacity">
-              Peer
-              <br />
-              Prep
-            </Link>
-
-            <nav className="flex items-center gap-4">
-              <Link
-                href="/matching"
-                className="flex items-center gap-2 rounded-full bg-blue-200 px-6 py-3 text-sm font-medium text-gray-900 transition-colors hover:bg-blue-300"
-              >
-                <User className="h-4 w-4" />
-                Match
-              </Link>
-              <Link
-                href="/question"
-                className="flex items-center gap-2 rounded-full bg-blue-200 px-6 py-3 text-sm font-medium text-gray-900 transition-colors hover:bg-blue-300"
-              >
-                <Folder className="h-4 w-4" />
-                Questions
-              </Link>
-              <Link
-                href="/history"
-                className="flex items-center gap-2 rounded-full bg-blue-200 px-6 py-3 text-sm font-medium text-gray-900 transition-colors hover:bg-blue-300"
-              >
-                <Clock className="h-4 w-4" />
-                Attempt History
-              </Link>
-            </nav>
-          </div>
-
-          <div className="flex items-center gap-4">
-            <Link
-              href="/user/profile"
-              className="flex h-12 w-12 items-center justify-center rounded-full border-2 border-gray-900 bg-blue-200 transition-colors hover:bg-blue-300"
-            >
-              <User className="h-6 w-6 text-gray-900" />
-            </Link>
-          </div>
-        </div>
-      </header>
+      <AppHeader />
 
       {/* Main Content */}
       <div className="mx-auto max-w-7xl px-6 py-8">

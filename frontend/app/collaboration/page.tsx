@@ -1,11 +1,12 @@
 "use client"
 
-import { use, useEffect, useRef, useState } from "react"
+import { useEffect } from "react"
 import ProblemDescriptionPanel from "./components/ProblemDescriptionPanel"
 // import CollaborationEditor from "./components/CollaborationEditor"
 import dynamic from "next/dynamic"
 import { useSearchParams } from "next/navigation"
 import { useRoomStore } from "../../store/useRoomStore"
+import { AppHeader } from "../../components/navigation/AppHeader"
 
 const mockQuestion = {
   title: "Two Sum",
@@ -31,32 +32,30 @@ const CollaborationEditor = dynamic(
 
 
 const CollaborationPage = () => {
+  const searchParams = useSearchParams()
+  const roomId = searchParams.get("roomId")
+  const setRoomId = useRoomStore((state) => state.setRoomId)
 
-    const searchParams = useSearchParams();
-    const roomId = searchParams.get("roomId");
-    const setRoomId = useRoomStore((state) => state.setRoomId);
+  useEffect(() => {
+    if (roomId) {
+      console.log("Joining room:", roomId)
+      setRoomId(roomId)
+    }
+  }, [roomId, setRoomId])
 
-    useEffect(() => {
-        if (roomId) {
-            console.log("Joining room:", roomId);
-            setRoomId(roomId);
-           
-        }
-
-    }, [roomId]);
-
-    return (
-        <div className="min-h-screen bg-blue-100">
-        <div className="flex h-screen">
-          <ProblemDescriptionPanel
-            title={mockQuestion.title}
-            description={mockQuestion.description}
-            examples={mockQuestion.examples}
-          />
-          <CollaborationEditor roomId={roomId}/>
-        </div>
+  return (
+    <div className="flex min-h-screen flex-col bg-blue-100">
+      <AppHeader />
+      <div className="flex flex-1">
+        <ProblemDescriptionPanel
+          title={mockQuestion.title}
+          description={mockQuestion.description}
+          examples={mockQuestion.examples}
+        />
+        <CollaborationEditor roomId={roomId} />
       </div>
-    );
+    </div>
+  )
 }
 
-export default CollaborationPage;
+export default CollaborationPage
