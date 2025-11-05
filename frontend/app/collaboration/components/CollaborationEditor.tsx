@@ -47,6 +47,7 @@ export default function CollaborationEditor({ roomId }: { roomId: string | null 
   const providerRef = useRef<WebsocketProvider | null>(null)
   const bindingRef = useRef<MonacoBinding | null>(null)
   const decorationsRef = useRef<string[]>([])
+  const awarenessChangeHandlerRef = useRef<(() => void) | null>(null)
 
   const [chatOpen, setChatOpen] = useState<boolean>(false)
   const [chatInput, setChatInput] = useState<string>("")
@@ -61,6 +62,20 @@ export default function CollaborationEditor({ roomId }: { roomId: string | null 
   const provider = new WebsocketProvider(wsUrl, roomId, ydoc)
     providerRef.current = provider
     return () => {
+      if (awarenessChangeHandlerRef.current && provider.awareness) {
+        provider.awareness.off("change", awarenessChangeHandlerRef.current)
+        awarenessChangeHandlerRef.current = null
+      }
+
+      bindingRef.current?.destroy?.()
+      bindingRef.current = null
+
+      if (editorRef.current) {
+        editorRef.current.deltaDecorations(decorationsRef.current, [])
+        decorationsRef.current = []
+        editorRef.current = null
+      }
+
       provider.destroy()
       providerRef.current = null
       ydoc.destroy()
@@ -101,14 +116,30 @@ export default function CollaborationEditor({ roomId }: { roomId: string | null 
   function handleEditorDidMount(editor: any, monaco: any) {
     if (!ydocRef.current || !roomId) return
     const yText = ydocRef.current.getText("monaco")
-    const binding = new MonacoBinding(yText, editor.getModel(), new Set([editor]), providerRef.current!.awareness)
+    const provider = providerRef.current
+    if (!provider) return
+
+    const binding = new MonacoBinding(yText, editor.getModel(), new Set([editor]), provider.awareness)
     bindingRef.current = binding
     editorRef.current = editor
-    providerRef.current!.awareness.on("change", () => {
-      const states = Array.from(providerRef.current!.awareness.getStates().entries())
+    const awareness = provider.awareness
+    if (awarenessChangeHandlerRef.current) {
+      awareness.off("change", awarenessChangeHandlerRef.current)
+      awarenessChangeHandlerRef.current = null
+    }
+    const handleAwarenessChange = () => {
+      const currentProvider = providerRef.current
+      const currentAwareness = currentProvider?.awareness
+      const editorInstance = editorRef.current
+
+      if (!currentProvider || !currentAwareness || !editorInstance) {
+        return
+      }
+
+      const states = Array.from(currentAwareness.getStates().entries())
       const decorations: monaco.editor.IModelDeltaDecoration[] = []
       states.forEach(([clientId, state]) => {
-        if (clientId === providerRef.current!.awareness.clientID) return
+        if (clientId === currentAwareness.clientID) return
         if (state.selection) {
           const { start, end } = state.selection;
           if (start && end) {
@@ -119,8 +150,11 @@ export default function CollaborationEditor({ roomId }: { roomId: string | null 
           }
         }
       })
-      decorationsRef.current = editor.deltaDecorations(decorationsRef.current, decorations)
-    })
+      decorationsRef.current = editorInstance.deltaDecorations(decorationsRef.current, decorations)
+    }
+
+    awareness.on("change", handleAwarenessChange)
+    awarenessChangeHandlerRef.current = handleAwarenessChange
   }
 
   const handleCodeRun = async () => {

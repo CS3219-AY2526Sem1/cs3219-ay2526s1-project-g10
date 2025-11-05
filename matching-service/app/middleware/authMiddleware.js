@@ -26,6 +26,8 @@ export async function verifyAuth(req, res, next) {
       userId: data.user.id,
       email: data.user.email,
       emailConfirmedAt: data.user.email_confirmed_at,
+      difficulty: req.body?.difficulty || req.query?.difficulty || null,
+      topic: req.body?.topic || req.query?.topic || null,
     };
 
     next();

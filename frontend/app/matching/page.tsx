@@ -165,6 +165,8 @@ export default function MatchPage() {
       router.push(`/collaboration?roomId=${encodeURIComponent(roomId)}`)
     } catch (error) { 
       console.error("Error matching with user:", error)
+      const message = error instanceof Error ? error.message : "Failed to confirm match. Please try again."
+      setSearchMessage(message)
     }
   }
 

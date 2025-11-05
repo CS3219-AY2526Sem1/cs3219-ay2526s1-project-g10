@@ -1,7 +1,13 @@
 import { isAxiosError } from "axios"
 import { matchClient } from "../../network/axiosClient"
 import { useAuthStore } from "../../store/useAuthStore"
-import { MatchCriteria, MatchResult, MatchSearchOutcome } from "./types"
+import {
+  MatchCriteria,
+  MatchResult,
+  MatchSearchOutcome,
+  MatchQuestion,
+  MatchSession,
+} from "./types"
 
 interface BackendMatchResponse {
   matchFound: boolean
@@ -18,6 +24,7 @@ interface BackendMatchResponse {
   waitTime?: number
   roomId?: string
   sessionReady?: boolean
+  question?: MatchQuestion | null
 }
 
 interface ConfirmMatchResponse {
@@ -25,6 +32,13 @@ interface ConfirmMatchResponse {
   sessionId: string
   partnerId: string
   roomId: string
+  question?: MatchQuestion | null
+  difficulty?: string | null
+  topic?: string | null
+}
+
+interface ActiveSessionResponse extends MatchSession {
+  sessionId: string
 }
 
 async function requireUserId(): Promise<string> {
@@ -94,6 +108,7 @@ export async function findMatches(
       return {
         matches: [match],
         roomId: initialResponse.roomId,
+        question: initialResponse.question ?? null,
       }
     }
 
@@ -122,6 +137,7 @@ export async function findMatches(
         return {
           matches: [match],
           roomId: checkResponse.roomId,
+          question: checkResponse.question ?? null,
         }
       }
     }
@@ -169,5 +185,21 @@ export async function cancelMatching(): Promise<void> {
       throw new Error(message)
     }
     console.error("Error cancelling match:", error)
+  }
+}
+
+export async function getActiveSession(): Promise<MatchSession> {
+  try {
+    const response = await matchClient.get<ActiveSessionResponse>("/api/match/session")
+    return response.data
+  } catch (error) {
+    if (isAxiosError(error)) {
+      const message = (error.response?.data as { error?: string; message?: string } | undefined)?.error
+        ?? error.response?.data?.message
+        ?? error.message
+        ?? "Failed to fetch active session"
+      throw new Error(message)
+    }
+    throw error
   }
 }
