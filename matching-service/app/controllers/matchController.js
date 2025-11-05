@@ -110,12 +110,59 @@ async function handleMatch(userId, partner) {
    console.log(`Matched ${userId} with ${partner.userId}!`);
 }
 
+async function allocateRoomId() {
+    // Incrementing counter guarantees new unused room ID
+    const roomId = await redis.incr("collab:roomCounter");
+    await redis.sadd("collab:activeRooms", roomId);
+    return roomId.toString();
+}
+
 export const startMatching = async (req, res) => {
    console.log("Matching started...");
 
-   const { userId, difficulty, topic } = req.body;
-   if (!userId || !difficulty || !topic) {
+   const authenticatedUserId = req.user?.userId;
+   const { userId: bodyUserId, difficulty, topic } = req.body;
+
+   if (!authenticatedUserId) {
+       return res.status(401).json({ error: "Authentication required" });
+   }
+
+   if (!difficulty || !topic) {
        return res.status(400).json( { error: "Missing fields in request body"} );
+   }
+
+   if (bodyUserId && bodyUserId !== authenticatedUserId) {
+       console.warn(`startMatching: Ignoring mismatched userId ${bodyUserId}, using authenticated user ${authenticatedUserId}`);
+   }
+
+   const userId = authenticatedUserId;
+
+   const existingSession = await redis.get(`session:${userId}`);
+   if (existingSession) {
+       const session = JSON.parse(existingSession);
+
+       let partnerUsername = session.partnerUsername;
+       if (!partnerUsername) {
+           const { data: partnerProfile } = await supabase
+               .from('users')
+               .select('username')
+               .eq('id', session.partnerId)
+               .single();
+           partnerUsername = partnerProfile?.username ?? `User ${session.partnerId}`;
+       }
+
+       return res.json({
+           matchFound: true,
+           matchedWith: {
+               userId: session.partnerId,
+               username: partnerUsername,
+               difficulty: session.difficulty,
+               topic: session.topic,
+               matched: true,
+           },
+           roomId: session.roomId,
+           sessionReady: true,
+       });
    }
 
    console.log(`User ${userId} is requesting a match...`);
@@ -230,29 +277,48 @@ export const confirmMatch = async (req, res) => {
            return res.status(400).json({ error: "Invalid match pairing" });
        }
 
-       const sessionId = `session-${Date.now()}-${Math.random().toString(36).substring(7)}`;
+       const roomId = await allocateRoomId();
+       const sessionId = `session-${roomId}`;
 
-       await redis.setex(`session:${currentUserId}`, 3600, JSON.stringify({
+       if (!currentData?.matchedWith || !otherData?.matchedWith) {
+           console.error("Missing match payloads for session", { currentUserId, userId });
+           return res.status(500).json({ error: "Match state incomplete" });
+       }
+
+       const currentSessionPayload = {
            sessionId,
+           roomId,
            partnerId: userId,
+           partnerUsername: currentData.matchedWith?.username ?? `User ${userId}`,
+           difficulty: currentData.matchedWith?.difficulty,
+           topic: currentData.matchedWith?.topic,
            createdAt: Date.now()
-       }));
+       };
 
-       await redis.setex(`session:${userId}`, 3600, JSON.stringify({
+       const partnerSessionPayload = {
            sessionId,
+           roomId,
            partnerId: currentUserId,
+           partnerUsername: otherData.matchedWith?.username ?? `User ${currentUserId}`,
+           difficulty: otherData.matchedWith?.difficulty,
+           topic: otherData.matchedWith?.topic,
            createdAt: Date.now()
-       }));
+       };
+
+       await redis.setex(`session:${currentUserId}`, 3600, JSON.stringify(currentSessionPayload));
+
+       await redis.setex(`session:${userId}`, 3600, JSON.stringify(partnerSessionPayload));
 
        await redis.del(`match:${currentUserId}`);
        await redis.del(`match:${userId}`);
 
-       console.log(`Session ${sessionId} created for users ${currentUserId} and ${userId}`);
+       console.log(`Session ${sessionId} created for users ${currentUserId} and ${userId} with room ${roomId}`);
 
        return res.json({
            success: true,
            sessionId,
-           partnerId: userId
+            partnerId: userId,
+            roomId
        });
 
    } catch (error) {
@@ -263,6 +329,10 @@ export const confirmMatch = async (req, res) => {
 
 export const cancelMatching = async (req, res) => {
    const userId = req.user?.userId;
+
+    if (!userId) {
+         return res.status(401).json({ error: "Authentication required" });
+    }
 
    try {
        // Remove from waiting queue

@@ -1,8 +1,11 @@
+import * as mockMatching from "./mockMatching"
+import * as realMatching from "./realMatching"
+
 // Matching service - switches between mock and real based on environment
 const USE_MOCK = process.env.NEXT_PUBLIC_USE_MOCK === "true"
 
-export type { MatchResult, MatchCriteria } from "./mockMatching"
+export type { MatchResult, MatchCriteria, MatchSearchOutcome } from "./types"
 
-export const matchingService = USE_MOCK ? require("./mockMatching") : require("./realMatching")
+const matchingService = USE_MOCK ? mockMatching : realMatching
 
-export const { findMatches, matchWithUser } = matchingService
+export const { findMatches, matchWithUser, cancelMatching } = matchingService

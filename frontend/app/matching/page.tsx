@@ -1,9 +1,10 @@
 "use client"
 
-import { useState } from "react"
-import { findMatches, matchWithUser, type MatchResult, type MatchCriteria } from "../../services/matching"
+import { useEffect, useRef, useState } from "react"
+import { cancelMatching, findMatches, matchWithUser, type MatchResult, type MatchCriteria } from "../../services/matching"
 import { useRouter } from "next/navigation"
 import { AppHeader } from "../../components/navigation/AppHeader"
+import { User } from "lucide-react"
 
 export default function MatchPage() {
   //const [selectedLanguage, setSelectedLanguage] = useState<string | null>(null)
@@ -13,6 +14,8 @@ export default function MatchPage() {
   const [matchResults, setMatchResults] = useState<MatchResult[]>([])
   const [isLoading, setIsLoading] = useState(false)
   const [searchMessage, setSearchMessage] = useState<string>("")
+  const roomPollActiveRef = useRef(false)
+  const hasActiveSessionRef = useRef(false)
 
   // const isFindMatchDisabled = !selectedLanguage || !selectedDifficulty || !selectedTopic
   const isFindMatchDisabled = !selectedDifficulty || !selectedTopic
@@ -42,29 +45,113 @@ export default function MatchPage() {
     }
   }
 
+  useEffect(() => {
+    return () => {
+      roomPollActiveRef.current = false
+      if (!hasActiveSessionRef.current) {
+        void cancelMatching()
+      }
+    }
+  }, [])
+
+  const stopRoomPolling = () => {
+    roomPollActiveRef.current = false
+  }
+
+  const startRoomPolling = (criteria: MatchCriteria, partnerName: string) => {
+    if (!criteria.difficulties || !criteria.topics) {
+      return
+    }
+    if (roomPollActiveRef.current) {
+      return
+    }
+
+    roomPollActiveRef.current = true
+    setSearchMessage(`Match found! Waiting for ${partnerName} to confirm...`)
+
+    const poll = async () => {
+      try {
+        while (roomPollActiveRef.current) {
+          const outcome = await findMatches(criteria)
+
+          if (!roomPollActiveRef.current) {
+            break
+          }
+
+          if (outcome.roomId) {
+            roomPollActiveRef.current = false
+            const roomPartnerName = partnerName || outcome.matches[0]?.name || "your partner"
+            setSearchMessage(`Matched with ${roomPartnerName}! Redirecting...`)
+            hasActiveSessionRef.current = true
+            router.push(`/collaboration?roomId=${encodeURIComponent(outcome.roomId)}`)
+            return
+          }
+
+          await new Promise((resolve) => setTimeout(resolve, 3000))
+        }
+      } catch (error) {
+        if (roomPollActiveRef.current) {
+          console.error("Error while polling for collaboration room:", error)
+          setSearchMessage("Error while waiting for collaboration room. Please try again.")
+        }
+      } finally {
+        roomPollActiveRef.current = false
+      }
+    }
+
+    poll().catch((err) => {
+      console.error("Unexpected error in room polling:", err)
+    })
+  }
+
   const handleFindMatch = async () => {
+      if (isFindMatchDisabled) {
+        setSearchMessage("Please select a difficulty and topic before searching.")
+        return
+      }
+
       setIsLoading(true)
       setSearchMessage("Searching for match...")
       setMatchResults([]) // Clear previous results
+      stopRoomPolling()
+  hasActiveSessionRef.current = false
+
+      try {
+        await cancelMatching()
+      } catch (error) {
+        console.warn("Unable to cancel previous matching session:", error)
+      }
 
       try {
         const criteria: MatchCriteria = {
           difficulties: selectedDifficulty,
           topics: selectedTopic,
         }
-        const results = await findMatches(criteria, (msg) => {
+        const outcome = await findMatches(criteria, (msg) => {
           setSearchMessage(msg)
         })
-        setMatchResults(results)
 
-        if (results.length > 0) {
-          setSearchMessage("Match found!")
+        setMatchResults(outcome.matches)
+
+        if (outcome.roomId && outcome.matches.length > 0) {
+          const partnerName = outcome.matches[0]?.name ?? "your partner"
+          setSearchMessage(`Matched with ${partnerName}! Redirecting...`)
+          hasActiveSessionRef.current = true
+          router.push(`/collaboration?roomId=${encodeURIComponent(outcome.roomId)}`)
+          return
+        }
+
+        if (outcome.matches.length > 0) {
+          const partnerName = outcome.matches[0]?.name ?? "your partner"
+          setSearchMessage("Match found! Confirm to collaborate.")
+          startRoomPolling(criteria, partnerName)
         } else {
           setSearchMessage("No match found. Try different criteria.")
         }
       } catch (error) {
         console.error("Error fetching matches:", error)
-        setSearchMessage("Error occurred. Please try again.")
+        const message = error instanceof Error ? error.message : "Error occurred. Please try again."
+        setSearchMessage(message)
       } finally {
         setIsLoading(false)
       }
@@ -72,10 +159,11 @@ export default function MatchPage() {
 
   const handleMatchNow = async (userId: string) => {
     try {
-      await matchWithUser(userId)
-      alert(`Matched with user ${userId}!`)
-      router.push('/collaboration')
-    } catch (error) {
+      stopRoomPolling()
+      const roomId = await matchWithUser(userId)
+      hasActiveSessionRef.current = true
+      router.push(`/collaboration?roomId=${encodeURIComponent(roomId)}`)
+    } catch (error) { 
       console.error("Error matching with user:", error)
     }
   }
@@ -148,7 +236,7 @@ export default function MatchPage() {
             {/* Find Match Button */}
             <button
               onClick={handleFindMatch}
-              disabled={isLoading}
+              disabled={isLoading || isFindMatchDisabled}
               className={`w-full rounded-full px-6 py-3 font-medium text-gray-900 transition-colors
                         ${isLoading || isFindMatchDisabled ? "bg-blue-200 cursor-not-allowed" : "bg-blue-300 hover:bg-blue-400"}`}
             >

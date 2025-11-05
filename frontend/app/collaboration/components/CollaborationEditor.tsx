@@ -31,6 +31,8 @@ const API = axios.create({
   baseURL: "https://emkc.org/api/v2/piston",
 })
 
+const DEFAULT_COLLAB_WS = "ws://localhost:3004/collab"
+
 
 export default function CollaborationEditor({ roomId }: { roomId: string | null }) {
   const [language, setLanguage] = useState<string>("python")
@@ -53,13 +55,16 @@ export default function CollaborationEditor({ roomId }: { roomId: string | null 
 
   useEffect(() => {
     if (!roomId) return
-    const ydoc = new Y.Doc()
+  const ydoc = new Y.Doc()
     ydocRef.current = ydoc
-    const provider = new WebsocketProvider("ws://localhost:1234", roomId, ydoc)
+  const wsUrl = process.env.NEXT_PUBLIC_COLLAB_WS_URL ?? DEFAULT_COLLAB_WS
+  const provider = new WebsocketProvider(wsUrl, roomId, ydoc)
     providerRef.current = provider
     return () => {
-      provider.disconnect()
+      provider.destroy()
+      providerRef.current = null
       ydoc.destroy()
+      ydocRef.current = null
     }
   }, [roomId])
 

@@ -15,20 +15,25 @@ const YW_TARGET = `http://${YW_HOST}:${YW_PORT}`;
 // app.use("/collab", verifyRoomTokenMiddleware);
 
 // HTTP proxy for any REST endpoints the ws server might expose (usually none)
-app.use("/collab", createProxyMiddleware({
+const collabProxy = createProxyMiddleware({
   target: YW_TARGET,
   changeOrigin: true,
-  ws: true,             
+  ws: true,
   pathRewrite: { "^/collab": "" },
-}));
+});
+
+app.use("/collab", collabProxy);
 
 // Create HTTP server so we can hook WS upgrades too
 export const server = http.createServer(app);
 
 // Upgrade proxy: forward WebSocket upgrade to y-websocket
 server.on("upgrade", (req, socket, head) => {
-  // (Future) verify tokens here before allowing the upgrade.
-  // If allowed, proxy will handle the upgrade automatically because ws:true is set.
+  if (req.url && req.url.startsWith("/collab")) {
+    collabProxy.upgrade(req, socket, head);
+  } else {
+    socket.destroy();
+  }
 });
 
 const PORT = Number(process.env.PORT || 3004);

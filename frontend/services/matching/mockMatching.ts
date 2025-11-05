@@ -1,34 +1,31 @@
-// Mock matching service
-export interface MatchResult {
-  id: string
-  name: string
-  avatar: string
-}
-
-export interface MatchCriteria {
-  languages: string[]
-  difficulties: string[]
-  topics: string[]
-}
+// Mock matching service simulates queue behaviour without a backend
+import { MatchCriteria, MatchResult, MatchSearchOutcome } from "./types"
 
 const MOCK_MATCHES: MatchResult[] = [
-  { id: "1", name: "Alicia", avatar: "" },
-  { id: "2", name: "Ryan", avatar: "" },
-  { id: "3", name: "Daniel", avatar: "" },
+  { id: "1", name: "Alicia" },
+  { id: "2", name: "Ryan" },
+  { id: "3", name: "Daniel" },
 ]
 
-export async function findMatches(criteria: MatchCriteria): Promise<MatchResult[]> {
-  await new Promise((resolve) => setTimeout(resolve, 1000))
+let mockRoomId: string | null = null
 
-  // Filter based on criteria (simplified mock logic)
-  if (criteria.languages.length === 0 && criteria.difficulties.length === 0 && criteria.topics.length === 0) {
-    return []
-  }
-
-  return MOCK_MATCHES
+export async function findMatches(
+  _criteria: MatchCriteria,
+  onProgress?: (message: string) => void
+): Promise<MatchSearchOutcome> {
+  if (onProgress) onProgress("Searching for mock match...")
+  await new Promise((resolve) => setTimeout(resolve, 300))
+  return { matches: MOCK_MATCHES, roomId: mockRoomId ?? undefined }
 }
 
-export async function matchWithUser(userId: string): Promise<void> {
-  await new Promise((resolve) => setTimeout(resolve, 500))
-  console.log(`Matched with user ${userId}`)
+export async function matchWithUser(userId: string): Promise<string> {
+  await new Promise((resolve) => setTimeout(resolve, 200))
+  console.log(`Mock matched with user ${userId}`)
+  mockRoomId = "mock-room"
+  return mockRoomId
+}
+
+export async function cancelMatching(): Promise<void> {
+  mockRoomId = null
+  await new Promise((resolve) => setTimeout(resolve, 100))
 }

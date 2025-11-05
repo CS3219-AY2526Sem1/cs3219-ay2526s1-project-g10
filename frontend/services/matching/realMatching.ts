@@ -1,28 +1,13 @@
-// Real matching service (with Supabase authentication support)
-
-import { createClient } from "@supabase/supabase-js"
-
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-)
-
-export interface MatchResult {
-  id: string
-  name: string
-  username?: string
-  avatar?: string
-}
-
-export interface MatchCriteria {
-  difficulties: string | null
-  topics: string | null
-}
+import { isAxiosError } from "axios"
+import { matchClient } from "../../network/axiosClient"
+import { useAuthStore } from "../../store/useAuthStore"
+import { MatchCriteria, MatchResult, MatchSearchOutcome } from "./types"
 
 interface BackendMatchResponse {
   matchFound: boolean
   matchedWith?: {
     userId: string
+    username?: string
     difficulty: string
     topic: string
     joinedAt: number
@@ -31,48 +16,70 @@ interface BackendMatchResponse {
   message?: string
   timeout?: boolean
   waitTime?: number
+  roomId?: string
+  sessionReady?: boolean
 }
 
-async function getCurrentUserId(): Promise<string> {
-  const { data: { user } } = await supabase.auth.getUser()
+interface ConfirmMatchResponse {
+  success: boolean
+  sessionId: string
+  partnerId: string
+  roomId: string
+}
 
-  if (!user) {
-    throw new Error("User not authenticated")
+async function requireUserId(): Promise<string> {
+  const store = useAuthStore.getState()
+
+  if (store.user?.id) {
+    return store.user.id
   }
 
-  return user.id
+  await store.refreshUser()
+  const refreshed = useAuthStore.getState().user
+  if (refreshed?.id) {
+    return refreshed.id
+  }
+
+  throw new Error("User not authenticated")
 }
 
 // Helper to call the backend
 async function callMatchAPI(userId: string, difficulty: string, topic: string): Promise<BackendMatchResponse> {
-  const { data: { session } } = await supabase.auth.getSession()
-
-  const response = await fetch("http://localhost:3002/api/match", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${session?.access_token || ""}`,
-    },
-    body: JSON.stringify({
+  try {
+    const response = await matchClient.post<BackendMatchResponse>("/api/match", {
       userId,
       difficulty,
       topic,
-    }),
-  })
+    })
 
-  if (!response.ok) {
-    const errorData = await response.json().catch(() => ({}))
-    throw new Error(errorData.error || "Failed to fetch matches")
+    return response.data
+  } catch (error) {
+    if (isAxiosError(error)) {
+      const message = (error.response?.data as { error?: string; message?: string } | undefined)?.error
+        ?? error.response?.data?.message
+        ?? error.message
+        ?? "Failed to fetch matches"
+      throw new Error(message)
+    }
+    throw error
   }
+}
 
-  return response.json()
+function toMatchResult(payload: { userId: string; username?: string; difficulty: string; topic: string }, roomId?: string): MatchResult {
+  return {
+    id: payload.userId,
+    name: payload.username || `User ${payload.userId}`,
+    username: payload.username,
+    avatar: "",
+    roomId,
+  }
 }
 
 export async function findMatches(
   criteria: MatchCriteria,
   onProgress?: (message: string) => void
-): Promise<MatchResult[]> {
-  const userId = await getCurrentUserId()
+): Promise<MatchSearchOutcome> {
+  const userId = await requireUserId()
   const difficulty = criteria.difficulties!
   const topic = criteria.topics!
 
@@ -83,14 +90,11 @@ export async function findMatches(
 
     // Immediate match found
     if (initialResponse.matchFound && initialResponse.matchedWith) {
-      return [
-        {
-          id: initialResponse.matchedWith.userId,
-          name: initialResponse.matchedWith.username || `User ${initialResponse.matchedWith.userId}`,
-          username: initialResponse.matchedWith.username,
-          avatar: "",
-        },
-      ]
+      const match = toMatchResult(initialResponse.matchedWith, initialResponse.roomId)
+      return {
+        matches: [match],
+        roomId: initialResponse.roomId,
+      }
     }
 
     // No immediate match
@@ -114,20 +118,17 @@ export async function findMatches(
       const checkResponse = await callMatchAPI(userId, difficulty, topic)
 
       if (checkResponse.matchFound && checkResponse.matchedWith) {
-        return [
-          {
-            id: checkResponse.matchedWith.userId,
-            name: checkResponse.matchedWith.username || `User ${checkResponse.matchedWith.userId}`,
-            username: checkResponse.matchedWith.username,
-            avatar: "",
-          },
-        ]
+        const match = toMatchResult(checkResponse.matchedWith, checkResponse.roomId)
+        return {
+          matches: [match],
+          roomId: checkResponse.roomId,
+        }
       }
     }
 
     // Timeout, no match found
     if (onProgress) onProgress("No match found after 60 seconds")
-    return []
+    return { matches: [] }
 
   } catch (error) {
     console.error("Error in findMatches:", error)
@@ -135,22 +136,22 @@ export async function findMatches(
   }
 }
 
-export async function matchWithUser(userId: string): Promise<void> {
+export async function matchWithUser(userId: string): Promise<string> {
   try {
-    const { data: { session } } = await supabase.auth.getSession()
-
-    const response = await fetch(`http://localhost:3002/api/match/${userId}`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${session?.access_token || ""}`,
-      },
-    })
-
-    if (!response.ok) {
-      throw new Error("Failed to match with user")
+  const response = await matchClient.post<ConfirmMatchResponse>(`/api/match/${userId}`)
+    const roomId = response.data.roomId
+    if (!roomId) {
+      throw new Error("No collaboration room assigned yet")
     }
+    return roomId
   } catch (error) {
+    if (isAxiosError(error)) {
+      const message = (error.response?.data as { error?: string; message?: string } | undefined)?.error
+        ?? error.response?.data?.message
+        ?? error.message
+        ?? "Failed to match with user"
+      throw new Error(message)
+    }
     console.error("Error in matchWithUser:", error)
     throw error
   }
@@ -158,15 +159,15 @@ export async function matchWithUser(userId: string): Promise<void> {
 
 export async function cancelMatching(): Promise<void> {
   try {
-    const { data: { session } } = await supabase.auth.getSession()
-    await fetch("http://localhost:3002/api/match/cancel", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${session?.access_token || ""}`,
-      },
-    })
+    await matchClient.post("/api/match/cancel")
   } catch (error) {
+    if (isAxiosError(error)) {
+      const message = (error.response?.data as { error?: string; message?: string } | undefined)?.error
+        ?? error.response?.data?.message
+        ?? error.message
+        ?? "Error cancelling match"
+      throw new Error(message)
+    }
     console.error("Error cancelling match:", error)
   }
 }
