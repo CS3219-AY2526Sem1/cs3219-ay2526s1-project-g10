@@ -1,32 +1,69 @@
-import bcrypt from "bcrypt";
-import { isValidObjectId } from "mongoose";
-import {
-  createUser as _createUser,
-  deleteUserById as _deleteUserById,
-  findAllUsers as _findAllUsers,
-  findUserByEmail as _findUserByEmail,
-  findUserById as _findUserById,
-  findUserByUsername as _findUserByUsername,
-  findUserByUsernameOrEmail as _findUserByUsernameOrEmail,
-  updateUserById as _updateUserById,
-  updateUserPrivilegeById as _updateUserPrivilegeById,
-} from "../model/repository.js";
+import supabase from "../../supabaseClient.js";
+
+async function ensureUniqueUser(username, email, excludeId) {
+  const filters = [];
+  if (username) filters.push(`username.eq.${username}`);
+  if (email) filters.push(`email.eq.${email}`);
+
+  if (filters.length === 0) {
+    return null;
+  }
+
+  const { data, error } = await supabase
+    .from("users")
+    .select("id, username, email")
+    .or(filters.join(","));
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  if (!data) return null;
+
+  return data.find((item) => item.id !== excludeId);
+}
 
 export async function createUser(req, res) {
   try {
     const { username, email, password } = req.body;
     if (username && email && password) {
-      const existingUser = await _findUserByUsernameOrEmail(username, email);
-      if (existingUser) {
+      const duplicate = await ensureUniqueUser(username, email, undefined);
+      if (duplicate) {
         return res.status(409).json({ message: "username or email already exists" });
       }
 
-      const salt = bcrypt.genSaltSync(10);
-      const hashedPassword = bcrypt.hashSync(password, salt);
-      const createdUser = await _createUser(username, email, hashedPassword);
+      const { data, error } = await supabase.auth.admin.createUser({
+        email,
+        password,
+        email_confirm: true,
+        user_metadata: { username },
+      });
+
+      if (error || !data?.user) {
+        return res.status(400).json({ message: error?.message ?? "Failed to create user" });
+      }
+
+      const { error: profileError } = await supabase.from("users").insert({
+        id: data.user.id,
+        email,
+        username,
+        isAdmin: false,
+      });
+
+      if (profileError) {
+        await supabase.auth.admin.deleteUser(data.user.id);
+        return res.status(400).json({ message: profileError.message ?? "Failed to create user profile" });
+      }
+
       return res.status(201).json({
         message: `Created new user ${username} successfully`,
-        data: formatUserResponse(createdUser),
+        data: mapProfileToResponse({
+          id: data.user.id,
+          email,
+          username,
+          isAdmin: false,
+          createdAt: new Date().toISOString(),
+        }, data.user.email_confirmed_at),
       });
     } else {
       return res.status(400).json({ message: "username and/or email and/or password are missing" });
@@ -40,15 +77,16 @@ export async function createUser(req, res) {
 export async function getUser(req, res) {
   try {
     const userId = req.params.id;
-    if (!isValidObjectId(userId)) {
-      return res.status(404).json({ message: `User ${userId} not found` });
-    }
+    const { data, error } = await supabase
+      .from("users")
+  .select("id, email, username, isAdmin, createdAt")
+      .eq("id", userId)
+      .single();
 
-    const user = await _findUserById(userId);
-    if (!user) {
+    if (error || !data) {
       return res.status(404).json({ message: `User ${userId} not found` });
     } else {
-      return res.status(200).json({ message: `Found user`, data: formatUserResponse(user) });
+      return res.status(200).json({ message: `Found user`, data: mapProfileToResponse(data) });
     }
   } catch (err) {
     console.error(err);
@@ -58,9 +96,16 @@ export async function getUser(req, res) {
 
 export async function getAllUsers(req, res) {
   try {
-    const users = await _findAllUsers();
+    const { data, error } = await supabase
+      .from("users")
+  .select("id, email, username, isAdmin, createdAt")
+  .order("createdAt", { ascending: false });
 
-    return res.status(200).json({ message: `Found users`, data: users.map(formatUserResponse) });
+    if (error) {
+      return res.status(500).json({ message: error.message });
+    }
+
+    return res.status(200).json({ message: `Found users`, data: (data ?? []).map((item) => mapProfileToResponse(item)) });
   } catch (err) {
     console.error(err);
     return res.status(500).json({ message: "Unknown error when getting all users!" });
@@ -72,33 +117,51 @@ export async function updateUser(req, res) {
     const { username, email, password } = req.body;
     if (username || email || password) {
       const userId = req.params.id;
-      if (!isValidObjectId(userId)) {
+      const { data: existingUser, error: existingError } = await supabase
+        .from("users")
+  .select("id, email, username, isAdmin, createdAt")
+        .eq("id", userId)
+        .single();
+
+      if (existingError || !existingUser) {
         return res.status(404).json({ message: `User ${userId} not found` });
       }
-      const user = await _findUserById(userId);
-      if (!user) {
-        return res.status(404).json({ message: `User ${userId} not found` });
-      }
-      if (username || email) {
-        let existingUser = await _findUserByUsername(username);
-        if (existingUser && existingUser.id !== userId) {
-          return res.status(409).json({ message: "username already exists" });
-        }
-        existingUser = await _findUserByEmail(email);
-        if (existingUser && existingUser.id !== userId) {
-          return res.status(409).json({ message: "email already exists" });
+
+      if ((username && username !== existingUser.username) || (email && email !== existingUser.email)) {
+        const duplicate = await ensureUniqueUser(username ?? existingUser.username, email ?? existingUser.email, userId);
+        if (duplicate) {
+          return res.status(409).json({ message: "username or email already exists" });
         }
       }
 
-      let hashedPassword;
-      if (password) {
-        const salt = bcrypt.genSaltSync(10);
-        hashedPassword = bcrypt.hashSync(password, salt);
+      if (email || password) {
+        const { error: authError } = await supabase.auth.admin.updateUserById(userId, {
+          email: email ?? existingUser.email,
+          password: password ?? undefined,
+        });
+
+        if (authError) {
+          return res.status(400).json({ message: authError.message });
+        }
       }
-      const updatedUser = await _updateUserById(userId, username, email, hashedPassword);
+
+      const { data: updatedProfile, error: profileError } = await supabase
+        .from("users")
+        .update({
+          username: username ?? existingUser.username,
+          email: email ?? existingUser.email,
+        })
+        .eq("id", userId)
+  .select("id, email, username, isAdmin, createdAt")
+        .single();
+
+      if (profileError || !updatedProfile) {
+        return res.status(400).json({ message: profileError?.message ?? "Failed to update user" });
+      }
+
       return res.status(200).json({
         message: `Updated data for user ${userId}`,
-        data: formatUserResponse(updatedUser),
+        data: mapProfileToResponse(updatedProfile),
       });
     } else {
       return res.status(400).json({ message: "No field to update: username and email and password are all missing!" });
@@ -115,18 +178,30 @@ export async function updateUserPrivilege(req, res) {
 
     if (isAdmin !== undefined) {  // isAdmin can have boolean value true or false
       const userId = req.params.id;
-      if (!isValidObjectId(userId)) {
-        return res.status(404).json({ message: `User ${userId} not found` });
-      }
-      const user = await _findUserById(userId);
-      if (!user) {
+      const { data: existingUser, error } = await supabase
+        .from("users")
+        .select("id, email, username, isAdmin, createdAt")
+        .eq("id", userId)
+        .single();
+
+      if (error || !existingUser) {
         return res.status(404).json({ message: `User ${userId} not found` });
       }
 
-      const updatedUser = await _updateUserPrivilegeById(userId, isAdmin === true);
+      const { data: updatedUser, error: updateError } = await supabase
+        .from("users")
+        .update({ isAdmin: isAdmin === true })
+        .eq("id", userId)
+        .select("id, email, username, isAdmin, createdAt")
+        .single();
+
+      if (updateError || !updatedUser) {
+        return res.status(400).json({ message: updateError?.message ?? "Failed to update user privilege" });
+      }
+
       return res.status(200).json({
         message: `Updated privilege for user ${userId}`,
-        data: formatUserResponse(updatedUser),
+        data: mapProfileToResponse(updatedUser),
       });
     } else {
       return res.status(400).json({ message: "isAdmin is missing!" });
@@ -140,15 +215,18 @@ export async function updateUserPrivilege(req, res) {
 export async function deleteUser(req, res) {
   try {
     const userId = req.params.id;
-    if (!isValidObjectId(userId)) {
-      return res.status(404).json({ message: `User ${userId} not found` });
-    }
-    const user = await _findUserById(userId);
-    if (!user) {
+    const { data: existingUser, error } = await supabase
+      .from("users")
+      .select("id")
+      .eq("id", userId)
+      .single();
+
+    if (error || !existingUser) {
       return res.status(404).json({ message: `User ${userId} not found` });
     }
 
-    await _deleteUserById(userId);
+    await supabase.auth.admin.deleteUser(userId);
+    await supabase.from("users").delete().eq("id", userId);
     return res.status(200).json({ message: `Deleted user ${userId} successfully` });
   } catch (err) {
     console.error(err);
@@ -156,12 +234,13 @@ export async function deleteUser(req, res) {
   }
 }
 
-export function formatUserResponse(user) {
+export function mapProfileToResponse(user, emailConfirmedAt) {
   return {
     id: user.id,
     username: user.username,
     email: user.email,
     isAdmin: user.isAdmin,
-    createdAt: user.createdAt,
+  createdAt: user.createdAt,
+    emailConfirmedAt,
   };
 }

@@ -2,18 +2,21 @@
 export interface User {
   id: string
   email: string
-  name: string
-  role: "user" | "admin"
+  username: string
+  isAdmin: boolean
+  createdAt?: string
+  emailConfirmedAt?: string | null
 }
 
 export interface AuthResponse {
   user: User
   token: string
+  refreshToken?: string
 }
 
 const MOCK_USERS: User[] = [
-  { id: "1", email: "admin@example.com", name: "Admin User", role: "admin" },
-  { id: "2", email: "user@example.com", name: "John Doe", role: "user" },
+  { id: "1", email: "admin@example.com", username: "Admin User", isAdmin: true, emailConfirmedAt: new Date().toISOString() },
+  { id: "2", email: "user@example.com", username: "John Doe", isAdmin: false, emailConfirmedAt: new Date().toISOString() },
 ]
 
 export async function login(email: string, password: string): Promise<AuthResponse> {
@@ -30,7 +33,7 @@ export async function login(email: string, password: string): Promise<AuthRespon
   }
 }
 
-export async function signup(name: string, email: string, password: string): Promise<AuthResponse> {
+export async function signup(username: string, email: string, password: string): Promise<AuthResponse> {
   await new Promise((resolve) => setTimeout(resolve, 1000))
 
   if (MOCK_USERS.find((u) => u.email === email)) {
@@ -40,8 +43,9 @@ export async function signup(name: string, email: string, password: string): Pro
   const newUser: User = {
     id: `${Date.now()}`,
     email,
-    name,
-    role: "user",
+    username,
+    isAdmin: false,
+    emailConfirmedAt: null,
   }
 
   return {
@@ -62,10 +66,10 @@ export async function forgotPassword(email: string): Promise<void> {
 export async function getCurrentUser(): Promise<User | null> {
   await new Promise((resolve) => setTimeout(resolve, 500))
 
-  const userStr = localStorage.getItem("mock_user")
+  const userStr = localStorage.getItem("user") ?? localStorage.getItem("mock_user")
   if (!userStr) return null
 
-  return JSON.parse(userStr)
+  return JSON.parse(userStr) as User
 }
 
 export async function logout(): Promise<void> {

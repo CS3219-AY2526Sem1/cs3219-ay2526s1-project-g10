@@ -13,7 +13,7 @@ export const matchClient = axios.create({
 // Common interceptors (JWT, request ID)
 [userClient, matchClient].forEach(c => {
   c.interceptors.request.use(cfg => {
-    const token = typeof window !== "undefined" ? localStorage.getItem("token") : null;
+    const token = typeof window !== "undefined" ? localStorage.getItem("auth_token") : null;
     if (token) cfg.headers.Authorization = `Bearer ${token}`;
     return cfg;
   });

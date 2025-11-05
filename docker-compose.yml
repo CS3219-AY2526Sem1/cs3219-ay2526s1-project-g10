@@ -18,6 +18,11 @@ services:
       - "3002:3002"
     env_file:
       - ./matching-service/.env
+    environment:
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+    depends_on:
+      - redis
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:3003/healthz"]
       interval: 30s
@@ -59,6 +64,12 @@ services:
       - question-service
       - matching-service
       - collab-service
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    restart: unless-stopped
 
 
 volumes:

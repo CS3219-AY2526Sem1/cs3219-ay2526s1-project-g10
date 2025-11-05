@@ -10,7 +10,5 @@ RUN apk add --no-cache curl
 FROM base AS dev
 COPY . .
 
-RUN npx prisma generate
-
-EXPOSE 3002
+EXPOSE 3001
 CMD ["npm", "run", "dev"]

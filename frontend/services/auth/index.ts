@@ -2,8 +2,8 @@
 // Determine whether to use mock or real service
 const USE_MOCK = process.env.NEXT_PUBLIC_USE_MOCK === "true"
 
-// Export types from mockAuth (both mock and real share the same interface)
-export type { User, AuthResponse } from "./mockAuth"
+// Export types from realAuth (both mock and real share the same interface)
+export type { User, AuthResponse } from "./realAuth"
 
 // Import the appropriate service
 import * as mockAuth from "./mockAuth"

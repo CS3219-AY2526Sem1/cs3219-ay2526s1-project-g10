@@ -2,6 +2,7 @@
 
 import type React from "react"
 import { useState } from "react"
+import { isAxiosError } from "axios"
 import { Button } from "../components/ui/button"
 import { Input } from "../components/ui/input"
 import { Label } from "../components/ui/label"
@@ -27,20 +28,27 @@ export function SignupForm() {
     try {
       const { user, token } = await signup(name, email, password)
 
-      if (!user.email_confirmed_at) {
-        // Redirect to verification page instead of continuing
+      if (!user.emailConfirmedAt) {
         router.push(`/user/verify-email?email=${encodeURIComponent(email)}`)
         return
       }
 
-      localStorage.setItem("auth_token", token)
-      localStorage.setItem("user", JSON.stringify(user))
+      if (token) {
+        localStorage.setItem("auth_token", token)
+        localStorage.setItem("user", JSON.stringify(user))
+        await refreshUser()
+      }
 
-      await refreshUser()
-
-      router.push("/matching")
-    } catch (err: any) {
-      setError(err.message || "Failed to create account")
+      router.replace("/matching")
+    } catch (err) {
+      if (isAxiosError(err)) {
+        const message = (err.response?.data as { message?: string } | undefined)?.message ?? err.message
+        setError(message || "Failed to create account")
+      } else if (err instanceof Error) {
+        setError(err.message)
+      } else {
+        setError("Failed to create account")
+      }
     } finally {
       setIsLoading(false)
     }

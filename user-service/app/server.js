@@ -1,7 +1,6 @@
 import http from "http";
 import index from "./index.js";
 import "dotenv/config";
-import { connectToDB } from "./model/repository.js";
 
 //import testRoutes from "./app/routes/test-routes.js";
 //app.use("/test", testRoutes);
@@ -10,11 +9,7 @@ const port = process.env.USER_SERVICE_PORT || 3001;
 
 const server = http.createServer(index);
 
-await connectToDB().then(() => {
-  server.listen(port);
+server.listen(port, () => {
   console.log("User service server listening on http://localhost:" + port);
-}).catch((err) => {
-  console.error("Failed to connect to DB");
-  console.error(err);
 });
 

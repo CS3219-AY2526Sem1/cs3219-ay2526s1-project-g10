@@ -1,11 +1,22 @@
 "use client"
 
+import { useEffect } from "react"
+import { useRouter, useSearchParams } from "next/navigation"
 import { LoginForm } from "../../../components/login-form"
-import { useSearchParams } from "next/navigation"
+import { useAuth } from "../../../contexts/auth-context"
 
 export default function LoginPage() {
+  const { user, loading } = useAuth()
+  const router = useRouter()
   const searchParams = useSearchParams()
+  const next = searchParams?.get("next") ?? "/main"
   const message = searchParams?.get('message')
+
+  useEffect(() => {
+    if (!loading && user) {
+      router.replace(next)
+    }
+  }, [loading, user, next, router])
 
   return (
     <div className="min-h-screen flex flex-col items-center justify-center bg-gray-50 px-4">
