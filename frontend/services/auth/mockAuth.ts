@@ -3,17 +3,20 @@ export interface User {
   id: string
   email: string
   username: string
-  role: "user" | "admin"
+  isAdmin: boolean
+  createdAt?: string
+  emailConfirmedAt?: string | null
 }
 
 export interface AuthResponse {
   user: User
   token: string
+  refreshToken?: string
 }
 
 const MOCK_USERS: User[] = [
-  { id: "1", email: "admin@example.com", username: "Admin User", role: "admin" },
-  { id: "2", email: "user@example.com", username: "John Doe", role: "user" },
+  { id: "1", email: "admin@example.com", username: "Admin User", isAdmin: true, emailConfirmedAt: new Date().toISOString() },
+  { id: "2", email: "user@example.com", username: "John Doe", isAdmin: false, emailConfirmedAt: new Date().toISOString() },
 ]
 
 export async function login(email: string, password: string): Promise<AuthResponse> {
@@ -41,7 +44,8 @@ export async function signup(username: string, email: string, password: string):
     id: `${Date.now()}`,
     email,
     username,
-    role: "user",
+    isAdmin: false,
+    emailConfirmedAt: null,
   }
 
   return {

@@ -28,7 +28,7 @@ export function LoginForm() {
     try {
       const { user, token } = await login(email, password)
 
-      if (!user.email_confirmed_at) {
+      if (!user.emailConfirmedAt) {
         setError("Please verify your email before logging in.")
         router.push(`/user/verify-email?email=${encodeURIComponent(email)}`)
         return
@@ -45,7 +45,7 @@ export function LoginForm() {
       const next = searchParams?.get("next")
       if (next) {
         router.replace(next)
-      } else if (user.role === "admin") {
+      } else if (user.isAdmin) {
         router.replace("/admin")
       } else {
         router.replace("/main")

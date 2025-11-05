@@ -30,7 +30,7 @@ export async function getUserProfile(userId: string): Promise<UserProfile> {
     username: data.username,
     email: data.email,
     isAdmin: data.isAdmin,
-    createdAt: data.created_at || data.createdAt, // Handle both formats
+    createdAt: data.createdAt,
   }
 }
 
@@ -55,6 +55,6 @@ export async function updateUserProfile(
     username: data.username,
     email: data.email,
     isAdmin: data.isAdmin,
-    createdAt: data.created_at || data.createdAt,
+    createdAt: data.createdAt,
   }
 }

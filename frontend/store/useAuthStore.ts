@@ -31,7 +31,7 @@ export const useAuthStore = create<AuthState>()(
           const currentUser = await getCurrentUser()
           set({
             user: currentUser,
-            isAdmin: currentUser?.role === "admin",
+            isAdmin: currentUser?.isAdmin === true,
           })
         } catch (error) {
           console.error("Error fetching user:", error)

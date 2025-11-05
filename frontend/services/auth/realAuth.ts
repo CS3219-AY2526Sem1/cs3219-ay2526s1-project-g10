@@ -1,123 +1,100 @@
-import { createClient } from "@supabase/supabase-js"
+import { isAxiosError } from "axios"
+import { userClient } from "../../network/axiosClient"
 
 export interface User {
   id: string
   email: string
   username: string
-  role: "user" | "admin"
-  email_confirmed_at?: string | null
+  isAdmin: boolean
+  createdAt?: string
+  emailConfirmedAt?: string | null
 }
 
 export interface AuthResponse {
   user: User
   token: string
+  refreshToken?: string
 }
 
-const supabaseClient = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-)
-
-export async function login(email: string, password: string): Promise<AuthResponse> {
-  const { data, error } = await supabaseClient.auth.signInWithPassword({
-    email,
-    password,
-  })
-
-  if (error) throw error
-  if (!data.user || !data.session) throw new Error("Login failed")
-
-  const { data: profile, error: profileError } = await supabaseClient
-    .from("users")
-    .select("username, isAdmin")
-    .eq("id", data.user.id)
-    .single()
-
-  if (profileError || !profile) {
-    throw new Error("User profile not found. Please contact support.")
+function mapUser(payload: any): User {
+  if (!payload) {
+    throw new Error("User payload missing")
   }
 
-  if (!data.user.email_confirmed_at) {
+  return {
+    id: payload.id,
+    email: payload.email,
+    username: payload.username,
+    isAdmin: Boolean(payload.isAdmin),
+    createdAt: payload.createdAt,
+    emailConfirmedAt: payload.emailConfirmedAt ?? payload.email_confirmed_at ?? null,
+  }
+}
+
+export async function login(email: string, password: string): Promise<AuthResponse> {
+  const response = await userClient.post("/auth/login", { email, password })
+  const payload = (response.data as {
+    message?: string
+    data?: { user?: any; accessToken?: string; refreshToken?: string }
+  })?.data
+
+  if (!payload?.user || !payload.accessToken) {
+    throw new Error(response.data?.message ?? "Login failed")
+  }
+
+  const mappedUser = mapUser(payload.user)
+
+  if (!mappedUser.emailConfirmedAt) {
     throw new Error("Please verify your email before logging in.")
   }
 
   return {
-    user: {
-      id: data.user.id,
-      email: data.user.email!,
-      username: profile.username,
-      role: profile.isAdmin ? "admin" : "user",
-      email_confirmed_at: data.user.email_confirmed_at,
-    },
-    token: data.session.access_token,
+    user: mappedUser,
+    token: payload.accessToken,
+    refreshToken: payload.refreshToken,
   }
 }
 
 export async function signup(username: string, email: string, password: string): Promise<AuthResponse> {
-  const { data, error } = await supabaseClient.auth.signUp({
-    email,
-    password,
-    options: {
-      data: { username },
-      emailRedirectTo: `${window.location.origin}/auth/callback`,
-    },
-  })
+  const response = await userClient.post("/auth/signup", { username, email, password })
+  const payload = (response.data as { message?: string; data?: any }).data
 
-  if (error) throw error
-  if (!data.user) throw new Error("No user returned")
-
-  const { error: profileError } = await supabaseClient.from("users").insert({
-    id: data.user.id,
-    email: data.user.email,
-    username,
-    isAdmin: false,
-  })
-
-  if (profileError && profileError.code !== "23505") {
-    throw profileError
+  if (!payload) {
+    throw new Error(response.data?.message ?? "Signup failed")
   }
 
   return {
-    user: {
-      id: data.user.id,
-      email: data.user.email!,
-      username,
-      role: "user",
-      email_confirmed_at: data.user.email_confirmed_at,
-    },
-    token: data.session?.access_token || "",
+    user: mapUser(payload),
+    token: "",
   }
 }
 
 export async function forgotPassword(email: string): Promise<void> {
-  const { error } = await supabaseClient.auth.resetPasswordForEmail(email, {
-    redirectTo: `${window.location.origin}/user/reset-password`,
-  })
-
-  if (error) throw error
+  await userClient.post("/auth/forgot-password", { email })
 }
 
 export async function getCurrentUser(): Promise<User | null> {
-  const {
-    data: { user },
-  } = await supabaseClient.auth.getUser()
-
-  if (!user) return null
-
-  const { data: profile } = await supabaseClient.from("users").select("username, isAdmin").eq("id", user.id).single()
-
-  if (!profile) return null
-
-  return {
-    id: user.id,
-    email: user.email!,
-    username: profile.username,
-    role: profile.isAdmin ? "admin" : "user",
-    email_confirmed_at: user.email_confirmed_at,
+  try {
+    const response = await userClient.get("/auth/me")
+    const payload = (response.data as { message?: string; data?: any }).data
+    if (!payload) {
+      return null
+    }
+    return mapUser(payload)
+  } catch (error) {
+    if (isAxiosError(error) && error.response?.status === 401) {
+      return null
+    }
+    throw error
   }
 }
 
 export async function logout(): Promise<void> {
-  const { error } = await supabaseClient.auth.signOut()
-  if (error) throw error
+  try {
+    await userClient.post("/auth/logout")
+  } catch (error) {
+    if (!(isAxiosError(error) && error.response?.status === 401)) {
+      throw error
+    }
+  }
 }

@@ -28,15 +28,16 @@ export function SignupForm() {
     try {
       const { user, token } = await signup(name, email, password)
 
-      if (!user.email_confirmed_at) {
+      if (!user.emailConfirmedAt) {
         router.push(`/user/verify-email?email=${encodeURIComponent(email)}`)
         return
       }
 
-      localStorage.setItem("auth_token", token)
-      localStorage.setItem("user", JSON.stringify(user))
-
-      await refreshUser()
+      if (token) {
+        localStorage.setItem("auth_token", token)
+        localStorage.setItem("user", JSON.stringify(user))
+        await refreshUser()
+      }
 
       router.replace("/matching")
     } catch (err) {
