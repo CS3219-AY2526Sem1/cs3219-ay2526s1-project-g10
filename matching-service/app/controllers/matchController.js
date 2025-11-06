@@ -138,7 +138,7 @@ export const startMatching = async (req, res) => {
    }
 
    if (!difficulty || !topic) {
-       return res.status(400).json( { error: "Missing fields in request body"} );
+       return res.status(400).json({ error: "Missing fields in request body" });
    }
 
    if (bodyUserId && bodyUserId !== authenticatedUserId) {
@@ -457,5 +457,49 @@ export const cancelMatching = async (req, res) => {
    } catch (error) {
        console.error("Error cancelling match:", error);
        return res.status(500).json({ error: "Failed to cancel matching" });
+   }
+};
+
+export const endSession = async (req, res) => {
+   const userId = req.user?.userId;
+
+   if (!userId) {
+       return res.status(401).json({ error: "Authentication required" });
+   }
+
+   try {
+       const sessionValue = await redis.get(`session:${userId}`);
+
+       if (!sessionValue) {
+           return res.status(404).json({ error: "No active session" });
+       }
+
+       const session = JSON.parse(sessionValue);
+       const partnerId = session.partnerId;
+       const roomId = session.roomId;
+
+       const deleteKeys = [`session:${userId}`];
+       if (partnerId) {
+           deleteKeys.push(`session:${partnerId}`);
+       }
+
+       if (deleteKeys.length > 0) {
+           await redis.del(...deleteKeys);
+       }
+
+       if (roomId) {
+           await redis.srem("collab:activeRooms", roomId);
+       }
+
+       console.log(`Session ${session.sessionId} ended by user ${userId}`);
+
+       return res.json({
+           success: true,
+           roomId,
+           partnerId,
+       });
+   } catch (error) {
+       console.error("Error ending session:", error);
+       return res.status(500).json({ error: "Failed to end session" });
    }
 };

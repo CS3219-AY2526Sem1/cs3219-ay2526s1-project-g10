@@ -8,4 +8,4 @@ export type { MatchResult, MatchCriteria, MatchSearchOutcome, MatchQuestion, Mat
 
 const matchingService = USE_MOCK ? mockMatching : realMatching
 
-export const { findMatches, matchWithUser, cancelMatching, getActiveSession } = matchingService
+export const { findMatches, matchWithUser, cancelMatching, getActiveSession, leaveSession } = matchingService

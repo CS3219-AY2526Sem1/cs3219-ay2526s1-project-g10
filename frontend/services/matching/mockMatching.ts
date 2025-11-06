@@ -68,10 +68,13 @@ export async function cancelMatching(): Promise<void> {
   await new Promise((resolve) => setTimeout(resolve, 100))
 }
 
-export async function getActiveSession(): Promise<MatchSession> {
+export async function getActiveSession(): Promise<MatchSession | null> {
   await new Promise((resolve) => setTimeout(resolve, 50))
-  if (!mockSession) {
-    throw new Error("No active mock session")
-  }
   return mockSession
+}
+
+export async function leaveSession(): Promise<void> {
+  mockRoomId = null
+  mockSession = null
+  await new Promise((resolve) => setTimeout(resolve, 50))
 }

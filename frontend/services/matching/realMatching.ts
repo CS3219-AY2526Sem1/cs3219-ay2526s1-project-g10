@@ -37,9 +37,7 @@ interface ConfirmMatchResponse {
   topic?: string | null
 }
 
-interface ActiveSessionResponse extends MatchSession {
-  sessionId: string
-}
+type ActiveSessionResponse = MatchSession & { sessionId: string }
 
 async function requireUserId(): Promise<string> {
   const store = useAuthStore.getState()
@@ -188,16 +186,34 @@ export async function cancelMatching(): Promise<void> {
   }
 }
 
-export async function getActiveSession(): Promise<MatchSession> {
+export async function getActiveSession(): Promise<MatchSession | null> {
   try {
     const response = await matchClient.get<ActiveSessionResponse>("/api/match/session")
     return response.data
   } catch (error) {
     if (isAxiosError(error)) {
+      if (error.response?.status === 404) {
+        return null
+      }
       const message = (error.response?.data as { error?: string; message?: string } | undefined)?.error
         ?? error.response?.data?.message
         ?? error.message
         ?? "Failed to fetch active session"
+      throw new Error(message)
+    }
+    throw error
+  }
+}
+
+export async function leaveSession(): Promise<void> {
+  try {
+    await matchClient.delete("/api/match/session")
+  } catch (error) {
+    if (isAxiosError(error)) {
+      const message = (error.response?.data as { error?: string; message?: string } | undefined)?.error
+        ?? error.response?.data?.message
+        ?? error.message
+        ?? "Failed to leave session"
       throw new Error(message)
     }
     throw error

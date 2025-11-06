@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react"
 import { cancelMatching, findMatches, matchWithUser, type MatchResult, type MatchCriteria } from "../../services/matching"
-import { useRouter } from "next/navigation"
+import { useRouter, useSearchParams } from "next/navigation"
 import { AppHeader } from "../../components/navigation/AppHeader"
 import { User } from "lucide-react"
 
@@ -14,8 +14,11 @@ export default function MatchPage() {
   const [matchResults, setMatchResults] = useState<MatchResult[]>([])
   const [isLoading, setIsLoading] = useState(false)
   const [searchMessage, setSearchMessage] = useState<string>("")
+  const [notice, setNotice] = useState<string | null>(null)
   const roomPollActiveRef = useRef(false)
   const hasActiveSessionRef = useRef(false)
+  const noticeHandledRef = useRef(false)
+  const searchParams = useSearchParams()
 
   // const isFindMatchDisabled = !selectedLanguage || !selectedDifficulty || !selectedTopic
   const isFindMatchDisabled = !selectedDifficulty || !selectedTopic
@@ -37,14 +40,6 @@ export default function MatchPage() {
     "Graphs",
   ]
 
-  const toggleSelection = (item: string, selected: string[], setSelected: (items: string[]) => void) => {
-    if (selected.includes(item)) {
-      setSelected(selected.filter((i) => i !== item))
-    } else {
-      setSelected([...selected, item])
-    }
-  }
-
   useEffect(() => {
     return () => {
       roomPollActiveRef.current = false
@@ -53,6 +48,22 @@ export default function MatchPage() {
       }
     }
   }, [])
+
+  useEffect(() => {
+    const noticeParam = searchParams.get("notice")
+    if (noticeParam === "session-ended") {
+      if (noticeHandledRef.current) {
+        return
+      }
+      noticeHandledRef.current = true
+      const message = "The collaboration room was closed."
+      setNotice(message)
+      setSearchMessage(message)
+      router.replace("/matching")
+    } else {
+      noticeHandledRef.current = false
+    }
+  }, [searchParams, router])
 
   const stopRoomPolling = () => {
     roomPollActiveRef.current = false
@@ -105,61 +116,63 @@ export default function MatchPage() {
   }
 
   const handleFindMatch = async () => {
-      if (isFindMatchDisabled) {
-        setSearchMessage("Please select a difficulty and topic before searching.")
+    if (isFindMatchDisabled) {
+      setSearchMessage("Please select a difficulty and topic before searching.")
+      return
+    }
+
+    setNotice(null)
+    setIsLoading(true)
+    setSearchMessage("Searching for match...")
+    setMatchResults([])
+    stopRoomPolling()
+    hasActiveSessionRef.current = false
+
+    try {
+      await cancelMatching()
+    } catch (error) {
+      console.warn("Unable to cancel previous matching session:", error)
+    }
+
+    try {
+      const criteria: MatchCriteria = {
+        difficulties: selectedDifficulty,
+        topics: selectedTopic,
+      }
+      const outcome = await findMatches(criteria, (msg) => {
+        setSearchMessage(msg)
+      })
+
+      setMatchResults(outcome.matches)
+
+      if (outcome.roomId && outcome.matches.length > 0) {
+        const partnerName = outcome.matches[0]?.name ?? "your partner"
+        setSearchMessage(`Matched with ${partnerName}! Redirecting...`)
+        hasActiveSessionRef.current = true
+        router.push(`/collaboration?roomId=${encodeURIComponent(outcome.roomId)}`)
         return
       }
 
-      setIsLoading(true)
-      setSearchMessage("Searching for match...")
-      setMatchResults([]) // Clear previous results
-      stopRoomPolling()
-  hasActiveSessionRef.current = false
-
-      try {
-        await cancelMatching()
-      } catch (error) {
-        console.warn("Unable to cancel previous matching session:", error)
+      if (outcome.matches.length > 0) {
+        const partnerName = outcome.matches[0]?.name ?? "your partner"
+        setSearchMessage("Match found! Confirm to collaborate.")
+        startRoomPolling(criteria, partnerName)
+      } else {
+        setSearchMessage("No match found. Try different criteria.")
       }
-
-      try {
-        const criteria: MatchCriteria = {
-          difficulties: selectedDifficulty,
-          topics: selectedTopic,
-        }
-        const outcome = await findMatches(criteria, (msg) => {
-          setSearchMessage(msg)
-        })
-
-        setMatchResults(outcome.matches)
-
-        if (outcome.roomId && outcome.matches.length > 0) {
-          const partnerName = outcome.matches[0]?.name ?? "your partner"
-          setSearchMessage(`Matched with ${partnerName}! Redirecting...`)
-          hasActiveSessionRef.current = true
-          router.push(`/collaboration?roomId=${encodeURIComponent(outcome.roomId)}`)
-          return
-        }
-
-        if (outcome.matches.length > 0) {
-          const partnerName = outcome.matches[0]?.name ?? "your partner"
-          setSearchMessage("Match found! Confirm to collaborate.")
-          startRoomPolling(criteria, partnerName)
-        } else {
-          setSearchMessage("No match found. Try different criteria.")
-        }
-      } catch (error) {
-        console.error("Error fetching matches:", error)
-        const message = error instanceof Error ? error.message : "Error occurred. Please try again."
-        setSearchMessage(message)
-      } finally {
-        setIsLoading(false)
-      }
+    } catch (error) {
+      console.error("Error fetching matches:", error)
+      const message = error instanceof Error ? error.message : "Error occurred. Please try again."
+      setSearchMessage(message)
+    } finally {
+      setIsLoading(false)
     }
+  }
 
   const handleMatchNow = async (userId: string) => {
     try {
       stopRoomPolling()
+      setNotice(null)
       const roomId = await matchWithUser(userId)
       hasActiveSessionRef.current = true
       router.push(`/collaboration?roomId=${encodeURIComponent(roomId)}`)
@@ -176,6 +189,11 @@ export default function MatchPage() {
 
       {/* Main Content */}
       <div className="mx-auto max-w-7xl px-6 py-8">
+        {notice && (
+          <div className="mb-6 rounded-xl border border-blue-200 bg-blue-50 px-4 py-3 text-sm text-blue-900">
+            {notice}
+          </div>
+        )}
         <div className="grid grid-cols-1 gap-8 lg:grid-cols-[320px_1fr]">
           {/* Matching Criteria Sidebar */}
           <div className="rounded-3xl bg-white p-6 shadow-sm">
