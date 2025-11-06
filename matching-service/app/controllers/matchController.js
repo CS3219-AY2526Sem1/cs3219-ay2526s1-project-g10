@@ -1,5 +1,6 @@
 import redis from "../redisClient.js";
 import { createClient } from "@supabase/supabase-js";
+import { fetchRandomQuestion } from "../utils/questionClient.js";
 
 const supabase = createClient(
   process.env.SUPABASE_URL,
@@ -54,13 +55,13 @@ async function findBestMatch(user) {
 //   return allUsers.some((u) => u.userId === userId && !u.matched);
 //}
 
-async function handleMatch(userId, partner) {
+async function handleMatch(currentUser, partner) {
    const allUsers = (await redis.lrange("waitingUsers", 0, -1)).map((u) => JSON.parse(u));
 
    const { data: userData } = await supabase
       .from('users')
       .select('username')
-      .eq('id', userId)
+      .eq('id', currentUser.userId)
       .single();
 
    const { data: partnerData } = await supabase
@@ -69,10 +70,11 @@ async function handleMatch(userId, partner) {
       .eq('id', partner.userId)
       .single();
 
-   const username = userData?.username || `User ${userId}`;
+   const username = userData?.username || `User ${currentUser.userId}`;
    const partnerUsername = partnerData?.username || `User ${partner.userId}`;
+   const matchedAt = Date.now();
 
-   await redis.setex(`match:${userId}`, 60, JSON.stringify({
+   await redis.setex(`match:${currentUser.userId}`, 60, JSON.stringify({
           matchedWith: {
               userId: partner.userId,
               username: partnerUsername,
@@ -80,42 +82,98 @@ async function handleMatch(userId, partner) {
               topic: partner.topic,
               joinedAt: partner.joinedAt,
               matched: true,
-              matchedAt: Date.now()
-          }
+              matchedAt,
+          },
+          criteria: {
+              difficulty: currentUser.difficulty,
+              topic: currentUser.topic,
+          },
       }));
 
       await redis.setex(`match:${partner.userId}`, 60, JSON.stringify({
           matchedWith: {
-              userId: userId,
+              userId: currentUser.userId,
               username: username,
+              difficulty: currentUser.difficulty,
+              topic: currentUser.topic,
+              joinedAt: currentUser.joinedAt,
+              matched: true,
+              matchedAt,
+          },
+          criteria: {
               difficulty: partner.difficulty,
               topic: partner.topic,
-              joinedAt: Date.now(),
-              matched: true,
-              matchedAt: Date.now()
-          }
+          },
       }));
 
-   for (const u of allUsers) {
-     if (!u) continue;
-     if (u.userId === userId || u.userId === partner.userId) {
-       u.matched = true;
+   for (const user of allUsers) {
+     if (!user) continue;
+     if (user.userId === currentUser.userId || user.userId === partner.userId) {
+       user.matched = true;
      }
    }
 
-   const remainderUsers = allUsers.filter((u) => !u.matched);
+   const remainderUsers = allUsers.filter((user) => !user.matched);
    await updateWaitingUsers(remainderUsers);
 
    console.log(`Updated waiting queue with ${remainderUsers.length} users.`);
-   console.log(`Matched ${userId} with ${partner.userId}!`);
+   console.log(`Matched ${currentUser.userId} with ${partner.userId}!`);
+}
+
+async function allocateRoomId() {
+    // Incrementing counter guarantees new unused room ID
+    const roomId = await redis.incr("collab:roomCounter");
+    await redis.sadd("collab:activeRooms", roomId);
+    return roomId.toString();
 }
 
 export const startMatching = async (req, res) => {
    console.log("Matching started...");
 
-   const { userId, difficulty, topic } = req.body;
-   if (!userId || !difficulty || !topic) {
-       return res.status(400).json( { error: "Missing fields in request body"} );
+   const authenticatedUserId = req.user?.userId;
+   const { userId: bodyUserId, difficulty, topic } = req.body;
+
+   if (!authenticatedUserId) {
+       return res.status(401).json({ error: "Authentication required" });
+   }
+
+   if (!difficulty || !topic) {
+       return res.status(400).json({ error: "Missing fields in request body" });
+   }
+
+   if (bodyUserId && bodyUserId !== authenticatedUserId) {
+       console.warn(`startMatching: Ignoring mismatched userId ${bodyUserId}, using authenticated user ${authenticatedUserId}`);
+   }
+
+   const userId = authenticatedUserId;
+
+   const existingSession = await redis.get(`session:${userId}`);
+   if (existingSession) {
+       const session = JSON.parse(existingSession);
+
+       let partnerUsername = session.partnerUsername;
+       if (!partnerUsername) {
+           const { data: partnerProfile } = await supabase
+               .from('users')
+               .select('username')
+               .eq('id', session.partnerId)
+               .single();
+           partnerUsername = partnerProfile?.username ?? `User ${session.partnerId}`;
+       }
+
+       return res.json({
+           matchFound: true,
+           matchedWith: {
+               userId: session.partnerId,
+               username: partnerUsername,
+               difficulty: session.difficulty,
+               topic: session.topic,
+               matched: true,
+           },
+           roomId: session.roomId,
+           sessionReady: true,
+           question: session.question ?? null,
+       });
    }
 
    console.log(`User ${userId} is requesting a match...`);
@@ -138,7 +196,7 @@ export const startMatching = async (req, res) => {
        // Use findBestMatch (same difficulty required, topic preferred)
        const match = await findBestMatch(alreadyInQueue);
        if (match) {
-           await handleMatch(userId, match);
+           await handleMatch(alreadyInQueue, match);
            const matchData = JSON.parse(await redis.get(`match:${userId}`));
            return res.json({ matchFound: true, matchedWith: matchData.matchedWith });
        }
@@ -164,7 +222,7 @@ export const startMatching = async (req, res) => {
    // Check for difficulty match first within 30s
    const match = await findBestMatch({userId, difficulty, topic});
    if (match) {
-       await handleMatch(userId, match);
+    await handleMatch(newUser, match);
        const matchData = JSON.parse(await redis.get(`match:${userId}`));
        return res.json({ matchFound: true, matchedWith: matchData.matchedWith });
    }
@@ -230,29 +288,114 @@ export const confirmMatch = async (req, res) => {
            return res.status(400).json({ error: "Invalid match pairing" });
        }
 
-       const sessionId = `session-${Date.now()}-${Math.random().toString(36).substring(7)}`;
+       const roomId = await allocateRoomId();
+       const sessionId = `session-${roomId}`;
 
-       await redis.setex(`session:${currentUserId}`, 3600, JSON.stringify({
+       if (!currentData?.matchedWith || !otherData?.matchedWith) {
+           console.error("Missing match payloads for session", { currentUserId, userId });
+           return res.status(500).json({ error: "Match state incomplete" });
+       }
+
+       const currentCriteria = currentData.criteria ?? {};
+       const otherCriteria = otherData.criteria ?? {};
+
+       const sessionDifficultyRaw = currentCriteria.difficulty
+           || otherCriteria.difficulty
+           || currentData.matchedWith?.difficulty
+           || otherData.matchedWith?.difficulty
+           || "";
+
+       const topicsMatch = currentCriteria.topic
+           && otherCriteria.topic
+           && currentCriteria.topic === otherCriteria.topic;
+
+       const sessionTopicRaw = topicsMatch ? currentCriteria.topic : "";
+
+       const sessionDifficulty = sessionDifficultyRaw ? sessionDifficultyRaw.trim() : null;
+       const sessionTopic = sessionTopicRaw ? sessionTopicRaw.trim() : null;
+
+       if (!sessionDifficulty && !sessionTopic) {
+           return res.status(400).json({ error: "No matching criteria available to allocate a question" });
+       }
+
+       const difficultyUpper = sessionDifficulty ? sessionDifficulty.toUpperCase() : undefined;
+       const fetchAttempts = [];
+
+       if (difficultyUpper && sessionTopic) {
+           fetchAttempts.push({ difficulty: difficultyUpper, topic: sessionTopic });
+           fetchAttempts.push({ difficulty: difficultyUpper });
+           fetchAttempts.push({ topic: sessionTopic });
+       } else if (difficultyUpper) {
+           fetchAttempts.push({ difficulty: difficultyUpper });
+       } else if (sessionTopic) {
+           fetchAttempts.push({ topic: sessionTopic });
+       }
+
+       let sharedQuestion = null;
+       let lastQuestionError = null;
+
+       for (const criteria of fetchAttempts) {
+           try {
+               sharedQuestion = await fetchRandomQuestion(criteria);
+               if (sharedQuestion) {
+                   break;
+               }
+           } catch (questionError) {
+               lastQuestionError = questionError;
+               console.warn("Question fetch attempt failed", { criteria, error: questionError?.message ?? questionError });
+           }
+       }
+
+       if (!sharedQuestion) {
+           console.error("Unable to fetch a shared question for session", {
+               difficulty: sessionDifficulty,
+               topic: sessionTopic,
+               lastError: lastQuestionError?.message ?? lastQuestionError,
+           });
+           return res.status(502).json({ error: "Failed to retrieve a collaboration question" });
+       }
+
+       const timestamp = Date.now();
+
+       const currentSessionPayload = {
            sessionId,
+           roomId,
            partnerId: userId,
-           createdAt: Date.now()
-       }));
+           partnerUsername: currentData.matchedWith?.username ?? `User ${userId}`,
+           difficulty: sessionDifficulty,
+           topic: sessionTopic,
+           question: sharedQuestion,
+           createdAt: timestamp,
+       };
 
-       await redis.setex(`session:${userId}`, 3600, JSON.stringify({
+       const partnerSessionPayload = {
            sessionId,
+           roomId,
            partnerId: currentUserId,
-           createdAt: Date.now()
-       }));
+           partnerUsername: otherData.matchedWith?.username ?? `User ${currentUserId}`,
+           difficulty: sessionDifficulty,
+           topic: sessionTopic,
+           question: sharedQuestion,
+           createdAt: timestamp,
+       };
+
+       await redis.setex(`session:${currentUserId}`, 3600, JSON.stringify(currentSessionPayload));
+
+       await redis.setex(`session:${userId}`, 3600, JSON.stringify(partnerSessionPayload));
 
        await redis.del(`match:${currentUserId}`);
        await redis.del(`match:${userId}`);
 
-       console.log(`Session ${sessionId} created for users ${currentUserId} and ${userId}`);
+       console.log(`Session ${sessionId} created for users ${currentUserId} and ${userId} with room ${roomId}`);
 
        return res.json({
            success: true,
            sessionId,
-           partnerId: userId
+           partnerId: userId,
+           roomId,
+           question: sharedQuestion,
+           difficulty: sessionDifficulty,
+           topic: sessionTopic,
        });
 
    } catch (error) {
@@ -261,8 +404,44 @@ export const confirmMatch = async (req, res) => {
    }
 };
 
+export const getActiveSession = async (req, res) => {
+   const userId = req.user?.userId;
+
+   if (!userId) {
+       return res.status(401).json({ error: "Authentication required" });
+   }
+
+   try {
+       const sessionValue = await redis.get(`session:${userId}`);
+
+       if (!sessionValue) {
+           return res.status(404).json({ error: "No active session" });
+       }
+
+       const session = JSON.parse(sessionValue);
+
+       return res.json({
+           sessionId: session.sessionId,
+           roomId: session.roomId,
+           partnerId: session.partnerId,
+           partnerUsername: session.partnerUsername,
+           difficulty: session.difficulty,
+           topic: session.topic,
+           question: session.question ?? null,
+           createdAt: session.createdAt,
+       });
+   } catch (error) {
+       console.error("Error retrieving active session:", error);
+       return res.status(500).json({ error: "Failed to retrieve session" });
+   }
+};
+
 export const cancelMatching = async (req, res) => {
    const userId = req.user?.userId;
+
+    if (!userId) {
+         return res.status(401).json({ error: "Authentication required" });
+    }
 
    try {
        // Remove from waiting queue
@@ -278,5 +457,49 @@ export const cancelMatching = async (req, res) => {
    } catch (error) {
        console.error("Error cancelling match:", error);
        return res.status(500).json({ error: "Failed to cancel matching" });
+   }
+};
+
+export const endSession = async (req, res) => {
+   const userId = req.user?.userId;
+
+   if (!userId) {
+       return res.status(401).json({ error: "Authentication required" });
+   }
+
+   try {
+       const sessionValue = await redis.get(`session:${userId}`);
+
+       if (!sessionValue) {
+           return res.status(404).json({ error: "No active session" });
+       }
+
+       const session = JSON.parse(sessionValue);
+       const partnerId = session.partnerId;
+       const roomId = session.roomId;
+
+       const deleteKeys = [`session:${userId}`];
+       if (partnerId) {
+           deleteKeys.push(`session:${partnerId}`);
+       }
+
+       if (deleteKeys.length > 0) {
+           await redis.del(...deleteKeys);
+       }
+
+       if (roomId) {
+           await redis.srem("collab:activeRooms", roomId);
+       }
+
+       console.log(`Session ${session.sessionId} ended by user ${userId}`);
+
+       return res.json({
+           success: true,
+           roomId,
+           partnerId,
+       });
+   } catch (error) {
+       console.error("Error ending session:", error);
+       return res.status(500).json({ error: "Failed to end session" });
    }
 };

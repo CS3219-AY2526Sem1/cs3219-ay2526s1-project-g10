@@ -4,6 +4,7 @@ import { persist } from "zustand/middleware"
 type RoomState = {
   roomId: string | null
   setRoomId: (id: string) => void
+  clearRoomId: () => void
 }
 
 export const useRoomStore = create<RoomState>()(

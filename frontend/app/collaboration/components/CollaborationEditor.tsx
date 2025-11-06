@@ -18,8 +18,20 @@ import {
 } from "../../../components/ui/dropdown-menu"
 import { CODE_VERSIONS } from "../../../lib/constants"
 
-import { ChevronDownIcon, Play, Loader2, MessageCircle, X, Send } from "lucide-react"
+import { ChevronDownIcon, Play, Loader2, MessageCircle, X, Send, LogOut } from "lucide-react"
 import { Button } from "../../../components/ui/button"
+
+type Participant = {
+  name: string
+  isCurrentUser?: boolean
+}
+
+interface CollaborationEditorProps {
+  roomId: string | null
+  participants: Participant[]
+  onRequestLeave: () => void
+  leaving: boolean
+}
 
 const LANGUAGES = [
   { label: "Python", value: "python" },
@@ -31,8 +43,10 @@ const API = axios.create({
   baseURL: "https://emkc.org/api/v2/piston",
 })
 
+const DEFAULT_COLLAB_WS = "ws://localhost:3004/collab"
 
-export default function CollaborationEditor({ roomId }: { roomId: string | null }) {
+
+export default function CollaborationEditor({ roomId, participants, onRequestLeave, leaving }: CollaborationEditorProps) {
   const [language, setLanguage] = useState<string>("python")
   const [codeRunning, setCodeRunning] = useState<boolean>(false);
   const [codeOutput, setCodeOutput] = useState<string | null>(null);
@@ -45,6 +59,7 @@ export default function CollaborationEditor({ roomId }: { roomId: string | null 
   const providerRef = useRef<WebsocketProvider | null>(null)
   const bindingRef = useRef<MonacoBinding | null>(null)
   const decorationsRef = useRef<string[]>([])
+  const awarenessChangeHandlerRef = useRef<(() => void) | null>(null)
 
   const [chatOpen, setChatOpen] = useState<boolean>(false)
   const [chatInput, setChatInput] = useState<string>("")
@@ -53,13 +68,30 @@ export default function CollaborationEditor({ roomId }: { roomId: string | null 
 
   useEffect(() => {
     if (!roomId) return
-    const ydoc = new Y.Doc()
+  const ydoc = new Y.Doc()
     ydocRef.current = ydoc
-    const provider = new WebsocketProvider("ws://localhost:1234", roomId, ydoc)
+  const wsUrl = process.env.NEXT_PUBLIC_COLLAB_WS_URL ?? DEFAULT_COLLAB_WS
+  const provider = new WebsocketProvider(wsUrl, roomId, ydoc)
     providerRef.current = provider
     return () => {
-      provider.disconnect()
+      if (awarenessChangeHandlerRef.current && provider.awareness) {
+        provider.awareness.off("change", awarenessChangeHandlerRef.current)
+        awarenessChangeHandlerRef.current = null
+      }
+
+      bindingRef.current?.destroy?.()
+      bindingRef.current = null
+
+      if (editorRef.current) {
+        editorRef.current.deltaDecorations(decorationsRef.current, [])
+        decorationsRef.current = []
+        editorRef.current = null
+      }
+
+      provider.destroy()
+      providerRef.current = null
       ydoc.destroy()
+      ydocRef.current = null
     }
   }, [roomId])
 
@@ -96,14 +128,30 @@ export default function CollaborationEditor({ roomId }: { roomId: string | null 
   function handleEditorDidMount(editor: any, monaco: any) {
     if (!ydocRef.current || !roomId) return
     const yText = ydocRef.current.getText("monaco")
-    const binding = new MonacoBinding(yText, editor.getModel(), new Set([editor]), providerRef.current!.awareness)
+    const provider = providerRef.current
+    if (!provider) return
+
+    const binding = new MonacoBinding(yText, editor.getModel(), new Set([editor]), provider.awareness)
     bindingRef.current = binding
     editorRef.current = editor
-    providerRef.current!.awareness.on("change", () => {
-      const states = Array.from(providerRef.current!.awareness.getStates().entries())
+    const awareness = provider.awareness
+    if (awarenessChangeHandlerRef.current) {
+      awareness.off("change", awarenessChangeHandlerRef.current)
+      awarenessChangeHandlerRef.current = null
+    }
+    const handleAwarenessChange = () => {
+      const currentProvider = providerRef.current
+      const currentAwareness = currentProvider?.awareness
+      const editorInstance = editorRef.current
+
+      if (!currentProvider || !currentAwareness || !editorInstance) {
+        return
+      }
+
+      const states = Array.from(currentAwareness.getStates().entries())
       const decorations: monaco.editor.IModelDeltaDecoration[] = []
       states.forEach(([clientId, state]) => {
-        if (clientId === providerRef.current!.awareness.clientID) return
+        if (clientId === currentAwareness.clientID) return
         if (state.selection) {
           const { start, end } = state.selection;
           if (start && end) {
@@ -114,8 +162,11 @@ export default function CollaborationEditor({ roomId }: { roomId: string | null 
           }
         }
       })
-      decorationsRef.current = editor.deltaDecorations(decorationsRef.current, decorations)
-    })
+      decorationsRef.current = editorInstance.deltaDecorations(decorationsRef.current, decorations)
+    }
+
+    awareness.on("change", handleAwarenessChange)
+    awarenessChangeHandlerRef.current = handleAwarenessChange
   }
 
   const handleCodeRun = async () => {
@@ -179,27 +230,72 @@ export default function CollaborationEditor({ roomId }: { roomId: string | null 
   return (
     <div className="w-1/2 h-screen flex items-center justify-center bg-slate-800">
       <div className="bg-blue-200 rounded-lg shadow-lg p-6 w-[90%] h-[90vh] flex flex-col relative">
-        <div className="flex justify-between items-center mb-4">
-          <h2 className="text-xl font-bold text-slate-800">Live Collaboration Editor</h2>
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <button className="border border-slate-400 rounded px-2 py-1 text-slate-800 flex items-center gap-2 bg-white">
-                {LANGUAGES.find(l => l.value === language)?.label}
-                <ChevronDownIcon className="w-4 h-4" />
-              </button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent>
-              {LANGUAGES.map(lang => (
-                <DropdownMenuItem
-                  key={lang.value}
-                  onClick={() => setLanguage(lang.value)}
-                  className={language === lang.value ? "bg-blue-100" : ""}
-                >
-                  {lang.label}
-                </DropdownMenuItem>
-              ))}
-            </DropdownMenuContent>
-          </DropdownMenu>
+        <div className="mb-4 flex flex-col gap-4">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <h2 className="text-xl font-bold text-slate-800">Live Collaboration Editor</h2>
+              {roomId && (
+                <p className="text-xs font-medium uppercase tracking-wide text-slate-600">Room #{roomId}</p>
+              )}
+            </div>
+            <div className="flex flex-wrap items-center gap-2">
+              <Button
+                type="button"
+                variant="destructive"
+                size="sm"
+                onClick={onRequestLeave}
+                disabled={leaving}
+              >
+                {leaving ? (
+                  <>
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    Leaving...
+                  </>
+                ) : (
+                  <>
+                    Leave session
+                    <LogOut className="h-4 w-4" />
+                  </>
+                )}
+              </Button>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <button className="border border-slate-400 rounded px-2 py-1 text-slate-800 flex items-center gap-2 bg-white">
+                    {LANGUAGES.find(l => l.value === language)?.label}
+                    <ChevronDownIcon className="w-4 h-4" />
+                  </button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent>
+                  {LANGUAGES.map(lang => (
+                    <DropdownMenuItem
+                      key={lang.value}
+                      onClick={() => setLanguage(lang.value)}
+                      className={language === lang.value ? "bg-blue-100" : ""}
+                    >
+                      {lang.label}
+                    </DropdownMenuItem>
+                  ))}
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
+          </div>
+          {participants.length > 0 && (
+            <div className="flex flex-wrap items-center gap-2">
+              {participants.map((participant, idx) => {
+                const label = participant.isCurrentUser ? `${participant.name} (You)` : participant.name
+                return (
+                  <span
+                    key={`${participant.name}-${idx}`}
+                    className={`rounded-full px-3 py-1 text-xs font-semibold text-white ${
+                      participant.isCurrentUser ? "bg-slate-900" : "bg-slate-700"
+                    }`}
+                  >
+                    {label}
+                  </span>
+                )
+              })}
+            </div>
+          )}
         </div>
         <div className="flex-1 flex flex-col overflow-auto">
           <div className="flex items-center justify-end bg-gray-900 px-4 py-2 rounded-t-xl">

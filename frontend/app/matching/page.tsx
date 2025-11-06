@@ -1,10 +1,10 @@
 "use client"
 
-import { useState } from "react"
-import Link from "next/link"
-import { Search, Menu, User, Folder, Clock } from "lucide-react"
-import { findMatches, matchWithUser, type MatchResult, type MatchCriteria } from "../../services/matching"
-import { useRouter } from 'next/navigation'
+import { useEffect, useRef, useState } from "react"
+import { cancelMatching, findMatches, matchWithUser, type MatchResult, type MatchCriteria } from "../../services/matching"
+import { useRouter, useSearchParams } from "next/navigation"
+import { AppHeader } from "../../components/navigation/AppHeader"
+import { User } from "lucide-react"
 
 export default function MatchPage() {
   //const [selectedLanguage, setSelectedLanguage] = useState<string | null>(null)
@@ -14,6 +14,11 @@ export default function MatchPage() {
   const [matchResults, setMatchResults] = useState<MatchResult[]>([])
   const [isLoading, setIsLoading] = useState(false)
   const [searchMessage, setSearchMessage] = useState<string>("")
+  const [notice, setNotice] = useState<string | null>(null)
+  const roomPollActiveRef = useRef(false)
+  const hasActiveSessionRef = useRef(false)
+  const noticeHandledRef = useRef(false)
+  const searchParams = useSearchParams()
 
   // const isFindMatchDisabled = !selectedLanguage || !selectedDifficulty || !selectedTopic
   const isFindMatchDisabled = !selectedDifficulty || !selectedTopic
@@ -35,102 +40,160 @@ export default function MatchPage() {
     "Graphs",
   ]
 
-  const toggleSelection = (item: string, selected: string[], setSelected: (items: string[]) => void) => {
-    if (selected.includes(item)) {
-      setSelected(selected.filter((i) => i !== item))
-    } else {
-      setSelected([...selected, item])
+  useEffect(() => {
+    return () => {
+      roomPollActiveRef.current = false
+      if (!hasActiveSessionRef.current) {
+        void cancelMatching()
+      }
     }
+  }, [])
+
+  useEffect(() => {
+    const noticeParam = searchParams.get("notice")
+    if (noticeParam === "session-ended") {
+      if (noticeHandledRef.current) {
+        return
+      }
+      noticeHandledRef.current = true
+      const message = "The collaboration room was closed."
+      setNotice(message)
+      setSearchMessage(message)
+      router.replace("/matching")
+    } else {
+      noticeHandledRef.current = false
+    }
+  }, [searchParams, router])
+
+  const stopRoomPolling = () => {
+    roomPollActiveRef.current = false
   }
 
-  const handleFindMatch = async () => {
-      setIsLoading(true)
-      setSearchMessage("Searching for match...")
-      setMatchResults([]) // Clear previous results
+  const startRoomPolling = (criteria: MatchCriteria, partnerName: string) => {
+    if (!criteria.difficulties || !criteria.topics) {
+      return
+    }
+    if (roomPollActiveRef.current) {
+      return
+    }
 
+    roomPollActiveRef.current = true
+    setSearchMessage(`Match found! Waiting for ${partnerName} to confirm...`)
+
+    const poll = async () => {
       try {
-        const criteria: MatchCriteria = {
-          difficulties: selectedDifficulty,
-          topics: selectedTopic,
-        }
-        const results = await findMatches(criteria, (msg) => {
-          setSearchMessage(msg)
-        })
-        setMatchResults(results)
+        while (roomPollActiveRef.current) {
+          const outcome = await findMatches(criteria)
 
-        if (results.length > 0) {
-          setSearchMessage("Match found!")
-        } else {
-          setSearchMessage("No match found. Try different criteria.")
+          if (!roomPollActiveRef.current) {
+            break
+          }
+
+          if (outcome.roomId) {
+            roomPollActiveRef.current = false
+            const roomPartnerName = partnerName || outcome.matches[0]?.name || "your partner"
+            setSearchMessage(`Matched with ${roomPartnerName}! Redirecting...`)
+            hasActiveSessionRef.current = true
+            router.push(`/collaboration?roomId=${encodeURIComponent(outcome.roomId)}`)
+            return
+          }
+
+          await new Promise((resolve) => setTimeout(resolve, 3000))
         }
       } catch (error) {
-        console.error("Error fetching matches:", error)
-        setSearchMessage("Error occurred. Please try again.")
+        if (roomPollActiveRef.current) {
+          console.error("Error while polling for collaboration room:", error)
+          setSearchMessage("Error while waiting for collaboration room. Please try again.")
+        }
       } finally {
-        setIsLoading(false)
+        roomPollActiveRef.current = false
       }
     }
 
+    poll().catch((err) => {
+      console.error("Unexpected error in room polling:", err)
+    })
+  }
+
+  const handleFindMatch = async () => {
+    if (isFindMatchDisabled) {
+      setSearchMessage("Please select a difficulty and topic before searching.")
+      return
+    }
+
+    setNotice(null)
+    setIsLoading(true)
+    setSearchMessage("Searching for match...")
+    setMatchResults([])
+    stopRoomPolling()
+    hasActiveSessionRef.current = false
+
+    try {
+      await cancelMatching()
+    } catch (error) {
+      console.warn("Unable to cancel previous matching session:", error)
+    }
+
+    try {
+      const criteria: MatchCriteria = {
+        difficulties: selectedDifficulty,
+        topics: selectedTopic,
+      }
+      const outcome = await findMatches(criteria, (msg) => {
+        setSearchMessage(msg)
+      })
+
+      setMatchResults(outcome.matches)
+
+      if (outcome.roomId && outcome.matches.length > 0) {
+        const partnerName = outcome.matches[0]?.name ?? "your partner"
+        setSearchMessage(`Matched with ${partnerName}! Redirecting...`)
+        hasActiveSessionRef.current = true
+        router.push(`/collaboration?roomId=${encodeURIComponent(outcome.roomId)}`)
+        return
+      }
+
+      if (outcome.matches.length > 0) {
+        const partnerName = outcome.matches[0]?.name ?? "your partner"
+        setSearchMessage("Match found! Confirm to collaborate.")
+        startRoomPolling(criteria, partnerName)
+      } else {
+        setSearchMessage("No match found. Try different criteria.")
+      }
+    } catch (error) {
+      console.error("Error fetching matches:", error)
+      const message = error instanceof Error ? error.message : "Error occurred. Please try again."
+      setSearchMessage(message)
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
   const handleMatchNow = async (userId: string) => {
     try {
-      await matchWithUser(userId)
-      alert(`Matched with user ${userId}!`)
-      router.push('/collaboration')
-    } catch (error) {
+      stopRoomPolling()
+      setNotice(null)
+      const roomId = await matchWithUser(userId)
+      hasActiveSessionRef.current = true
+      router.push(`/collaboration?roomId=${encodeURIComponent(roomId)}`)
+    } catch (error) { 
       console.error("Error matching with user:", error)
+      const message = error instanceof Error ? error.message : "Failed to confirm match. Please try again."
+      setSearchMessage(message)
     }
   }
 
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* Header */}
-      <header className="bg-blue-100 px-6 py-4">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-6">
-            <Link href="/main" className="text-2xl font-bold text-gray-900 hover:opacity-80 transition-opacity">
-              Peer
-              <br />
-              Prep
-            </Link>
-
-            <nav className="flex items-center gap-4">
-              <Link
-                href="/matching"
-                className="flex items-center gap-2 rounded-full bg-blue-200 px-6 py-3 text-sm font-medium text-gray-900 transition-colors hover:bg-blue-300"
-              >
-                <User className="h-4 w-4" />
-                Match
-              </Link>
-              <Link
-                href="/question"
-                className="flex items-center gap-2 rounded-full bg-blue-200 px-6 py-3 text-sm font-medium text-gray-900 transition-colors hover:bg-blue-300"
-              >
-                <Folder className="h-4 w-4" />
-                Questions
-              </Link>
-              <Link
-                href="/history"
-                className="flex items-center gap-2 rounded-full bg-blue-200 px-6 py-3 text-sm font-medium text-gray-900 transition-colors hover:bg-blue-300"
-              >
-                <Clock className="h-4 w-4" />
-                Attempt History
-              </Link>
-            </nav>
-          </div>
-
-          <div className="flex items-center gap-4">
-            <Link
-              href="/user/profile"
-              className="flex h-12 w-12 items-center justify-center rounded-full border-2 border-gray-900 bg-blue-200 transition-colors hover:bg-blue-300"
-            >
-              <User className="h-6 w-6 text-gray-900" />
-            </Link>
-          </div>
-        </div>
-      </header>
+      <AppHeader />
 
       {/* Main Content */}
       <div className="mx-auto max-w-7xl px-6 py-8">
+        {notice && (
+          <div className="mb-6 rounded-xl border border-blue-200 bg-blue-50 px-4 py-3 text-sm text-blue-900">
+            {notice}
+          </div>
+        )}
         <div className="grid grid-cols-1 gap-8 lg:grid-cols-[320px_1fr]">
           {/* Matching Criteria Sidebar */}
           <div className="rounded-3xl bg-white p-6 shadow-sm">
@@ -193,7 +256,7 @@ export default function MatchPage() {
             {/* Find Match Button */}
             <button
               onClick={handleFindMatch}
-              disabled={isLoading}
+              disabled={isLoading || isFindMatchDisabled}
               className={`w-full rounded-full px-6 py-3 font-medium text-gray-900 transition-colors
                         ${isLoading || isFindMatchDisabled ? "bg-blue-200 cursor-not-allowed" : "bg-blue-300 hover:bg-blue-400"}`}
             >

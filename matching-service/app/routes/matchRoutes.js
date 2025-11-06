@@ -1,5 +1,6 @@
 import express from "express";
-import { startMatching, confirmMatch } from "../controllers/matchController.js";
+import { startMatching, confirmMatch, cancelMatching, getActiveSession, endSession } from "../controllers/matchController.js";
+import { verifyAuth } from "../middleware/authMiddleware.js";
 
 const router = express.Router();
 
@@ -8,7 +9,12 @@ const router = express.Router();
 //     res.json({ message: "Matching route is working!" });
 //   });
 
+router.use(verifyAuth);
+
 router.post("/", startMatching);
+router.post("/cancel", cancelMatching);
+router.get("/session", getActiveSession);
+router.delete("/session", endSession);
 router.post("/:userId", confirmMatch);
   
 export default router;
