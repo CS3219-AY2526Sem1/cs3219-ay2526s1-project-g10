@@ -27,17 +27,21 @@ export default function MatchPage() {
   //const languages = ["Java", "Python", "C"]
   const difficulties = ["Easy", "Medium", "Hard"]
   const topics = [
-    "Arrays & Strings",
-    "Linked Lists",
-    "Stacks & Queues",
-    "Hashing / Hash Maps",
-    "Heaps & Priority Queues",
-    "Sorting & Searching",
-    "Recursion",
-    "Greedy Algorithms",
-    "Divide & Conquer",
+    "Shell",
+    "Queue",
     "Dynamic Programming",
-    "Graphs",
+    "Algorithms",
+    "Linked List",
+    "Hash Table",
+    "Math",
+    "Others",
+    "String",
+    "Database",
+    "Array",
+    "Tree",
+    "Graph",
+    "Concurrency",
+    "Stack",
   ]
 
   useEffect(() => {

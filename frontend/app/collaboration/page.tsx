@@ -136,6 +136,7 @@ const CollaborationPage = () => {
 
         setSession(activeSession)
         setQuestion(activeSession.question ?? null)
+        console.log("Question:", activeSession.question)
 
         //recrod attempt in db
         if(activeSession.question && currentUser) {
