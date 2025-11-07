@@ -7,6 +7,55 @@ const supabase = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY
 );
 
+const TOPIC_ALIAS_MAP = {
+    "arrays & strings": "Array",
+    "arrays": "Array",
+    "array": "Array",
+    "strings": "String",
+    "string": "String",
+    "linked lists": "Linked List",
+    "linked list": "Linked List",
+    "stacks & queues": "Stack",
+    "stacks": "Stack",
+    "stack": "Stack",
+    "queues": "Queue",
+    "queue": "Queue",
+    "hashing / hash maps": "Hash Table",
+    "hash table": "Hash Table",
+    "hash tables": "Hash Table",
+    "hash map": "Hash Table",
+    "hash maps": "Hash Table",
+    "heaps & priority queues": "Algorithms",
+    "heap": "Algorithms",
+    "priority queue": "Algorithms",
+    "sorting & searching": "Algorithms",
+    "recursion": "Algorithms",
+    "greedy algorithms": "Algorithms",
+    "divide & conquer": "Algorithms",
+    "dynamic programming": "Dynamic Programming",
+    "graphs": "Graph",
+    "graph": "Graph",
+    "trees": "Tree",
+    "tree": "Tree",
+    "math": "Math",
+    "database": "Database",
+    "databases": "Database",
+    "shell": "Shell",
+    "concurrency": "Concurrency",
+    "others": "Others",
+    "algorithm": "Algorithms",
+    "algorithms": "Algorithms",
+};
+
+function normalizeTopic(topic) {
+    if (!topic || typeof topic !== "string") {
+        return "";
+    }
+    const cleaned = topic.trim();
+    const alias = TOPIC_ALIAS_MAP[cleaned.toLowerCase()];
+    return alias ?? cleaned;
+}
+
 // Helper: find a compatible match
 async function findMatch(user, type) {
    const users = (await redis.lrange("waitingUsers", 0, -1)).map((u) => JSON.parse(u));
@@ -23,13 +72,27 @@ async function updateWaitingUsers(remainderUsers) {
 }
 
 async function findBestMatch(user) {
-   const users = (await redis.lrange("waitingUsers", 0, -1)).map((u) => JSON.parse(u));
+   const normalizedTargetTopic = normalizeTopic(user.topic);
+   const rawUsers = (await redis.lrange("waitingUsers", 0, -1)).map((u) => JSON.parse(u));
+   let queueNeedsNormalization = false;
+   const users = rawUsers.map((candidate) => {
+       const normalized = normalizeTopic(candidate.topic);
+       if (normalized !== (candidate.topic ?? "")) {
+           queueNeedsNormalization = true;
+           return { ...candidate, topic: normalized };
+       }
+       return candidate;
+   });
+
+   if (queueNeedsNormalization) {
+       await updateWaitingUsers(users);
+   }
 
    // Filter to only users with same difficulty
    const sameDifficulty = users.filter((u) =>
        !u.matched &&
        u.userId !== user.userId &&
-       u.difficulty === user.difficulty
+        u.difficulty === user.difficulty
    );
 
    if (sameDifficulty.length === 0) {
@@ -37,7 +100,7 @@ async function findBestMatch(user) {
    }
 
    // Prefer users who also have the same topic
-   const sameDifficultyAndTopic = sameDifficulty.find((u) => u.topic === user.topic);
+    const sameDifficultyAndTopic = sameDifficulty.find((u) => normalizeTopic(u.topic) === normalizedTargetTopic);
 
    if (sameDifficultyAndTopic) {
        console.log(`Perfect match found: same difficulty AND topic`);
@@ -56,7 +119,26 @@ async function findBestMatch(user) {
 //}
 
 async function handleMatch(currentUser, partner) {
-   const allUsers = (await redis.lrange("waitingUsers", 0, -1)).map((u) => JSON.parse(u));
+   const rawUsers = (await redis.lrange("waitingUsers", 0, -1)).map((u) => JSON.parse(u));
+   let queueNeedsNormalization = false;
+   const allUsers = rawUsers.map((user) => {
+       const normalized = normalizeTopic(user.topic);
+       if (normalized !== (user.topic ?? "")) {
+           queueNeedsNormalization = true;
+           return { ...user, topic: normalized };
+       }
+       return user;
+   });
+
+   const normalizedCurrentUser = {
+       ...currentUser,
+       topic: normalizeTopic(currentUser.topic),
+   };
+
+   const normalizedPartner = {
+       ...partner,
+       topic: normalizeTopic(partner.topic),
+   };
 
    const { data: userData } = await supabase
       .from('users')
@@ -74,50 +156,52 @@ async function handleMatch(currentUser, partner) {
    const partnerUsername = partnerData?.username || `User ${partner.userId}`;
    const matchedAt = Date.now();
 
-   await redis.setex(`match:${currentUser.userId}`, 60, JSON.stringify({
+   await redis.setex(`match:${normalizedCurrentUser.userId}`, 60, JSON.stringify({
           matchedWith: {
-              userId: partner.userId,
+              userId: normalizedPartner.userId,
               username: partnerUsername,
-              difficulty: partner.difficulty,
-              topic: partner.topic,
-              joinedAt: partner.joinedAt,
+              difficulty: normalizedPartner.difficulty,
+              topic: normalizedPartner.topic,
+              joinedAt: normalizedPartner.joinedAt,
               matched: true,
               matchedAt,
           },
           criteria: {
-              difficulty: currentUser.difficulty,
-              topic: currentUser.topic,
+              difficulty: normalizedCurrentUser.difficulty,
+              topic: normalizedCurrentUser.topic,
           },
       }));
 
-      await redis.setex(`match:${partner.userId}`, 60, JSON.stringify({
+      await redis.setex(`match:${normalizedPartner.userId}`, 60, JSON.stringify({
           matchedWith: {
-              userId: currentUser.userId,
+              userId: normalizedCurrentUser.userId,
               username: username,
-              difficulty: currentUser.difficulty,
-              topic: currentUser.topic,
-              joinedAt: currentUser.joinedAt,
+              difficulty: normalizedCurrentUser.difficulty,
+              topic: normalizedCurrentUser.topic,
+              joinedAt: normalizedCurrentUser.joinedAt,
               matched: true,
               matchedAt,
           },
           criteria: {
-              difficulty: partner.difficulty,
-              topic: partner.topic,
+              difficulty: normalizedPartner.difficulty,
+              topic: normalizedPartner.topic,
           },
       }));
 
    for (const user of allUsers) {
      if (!user) continue;
-     if (user.userId === currentUser.userId || user.userId === partner.userId) {
+         if (user.userId === normalizedCurrentUser.userId || user.userId === normalizedPartner.userId) {
        user.matched = true;
      }
    }
 
-   const remainderUsers = allUsers.filter((user) => !user.matched);
-   await updateWaitingUsers(remainderUsers);
+     const remainderUsers = allUsers.filter((user) => !user.matched);
+     if (queueNeedsNormalization || remainderUsers.length !== allUsers.length) {
+         await updateWaitingUsers(remainderUsers);
+     }
 
    console.log(`Updated waiting queue with ${remainderUsers.length} users.`);
-   console.log(`Matched ${currentUser.userId} with ${partner.userId}!`);
+    console.log(`Matched ${normalizedCurrentUser.userId} with ${normalizedPartner.userId}!`);
 }
 
 async function allocateRoomId() {
@@ -131,7 +215,7 @@ export const startMatching = async (req, res) => {
    console.log("Matching started...");
 
    const authenticatedUserId = req.user?.userId;
-   const { userId: bodyUserId, difficulty, topic } = req.body;
+    const { userId: bodyUserId, difficulty, topic } = req.body;
 
    if (!authenticatedUserId) {
        return res.status(401).json({ error: "Authentication required" });
@@ -145,11 +229,18 @@ export const startMatching = async (req, res) => {
        console.warn(`startMatching: Ignoring mismatched userId ${bodyUserId}, using authenticated user ${authenticatedUserId}`);
    }
 
-   const userId = authenticatedUserId;
+    const userId = authenticatedUserId;
+    const normalizedTopic = normalizeTopic(topic);
 
    const existingSession = await redis.get(`session:${userId}`);
    if (existingSession) {
        const session = JSON.parse(existingSession);
+
+       const normalizedSessionTopic = normalizeTopic(session.topic);
+       if (normalizedSessionTopic !== (session.topic ?? "")) {
+           session.topic = normalizedSessionTopic;
+           await redis.setex(`session:${userId}`, 3600, JSON.stringify(session));
+       }
 
        let partnerUsername = session.partnerUsername;
        if (!partnerUsername) {
@@ -167,7 +258,7 @@ export const startMatching = async (req, res) => {
                userId: session.partnerId,
                username: partnerUsername,
                difficulty: session.difficulty,
-               topic: session.topic,
+               topic: normalizedSessionTopic,
                matched: true,
            },
            roomId: session.roomId,
@@ -182,11 +273,58 @@ export const startMatching = async (req, res) => {
    if (storedMatch) {
        const matchData = JSON.parse(storedMatch);
        console.log(`User ${userId} retrieving stored match`);
+       let shouldPersistNormalization = false;
+       let normalizedMatchedWith = matchData.matchedWith;
+       if (matchData?.matchedWith) {
+           const normalizedTopicValue = normalizeTopic(matchData.matchedWith.topic);
+           if (normalizedTopicValue !== (matchData.matchedWith.topic ?? "")) {
+               normalizedMatchedWith = {
+                   ...matchData.matchedWith,
+                   topic: normalizedTopicValue,
+               };
+               shouldPersistNormalization = true;
+           }
+       }
+
+       let normalizedCriteria = matchData.criteria;
+       if (matchData?.criteria) {
+           const normalizedCriteriaTopic = normalizeTopic(matchData.criteria.topic);
+           if (normalizedCriteriaTopic !== (matchData.criteria.topic ?? "")) {
+               normalizedCriteria = {
+                   ...matchData.criteria,
+                   topic: normalizedCriteriaTopic,
+               };
+               shouldPersistNormalization = true;
+           }
+       }
+
+       if (shouldPersistNormalization) {
+           await redis.setex(`match:${userId}`, 60, JSON.stringify({
+               ...matchData,
+               matchedWith: normalizedMatchedWith,
+               criteria: normalizedCriteria,
+           }));
+       }
+
        // Return the stored match (don't delete yet so multiple polls can see it)
-       return res.json({ matchFound: true, matchedWith: matchData.matchedWith });
+       return res.json({ matchFound: true, matchedWith: normalizedMatchedWith });
    }
 
-   const existingUsers = (await redis.lrange("waitingUsers", 0, -1)).map((u) => JSON.parse(u));
+   const rawExistingUsers = (await redis.lrange("waitingUsers", 0, -1)).map((u) => JSON.parse(u));
+   let queueNeedsNormalization = false;
+   const existingUsers = rawExistingUsers.map((user) => {
+       const normalized = normalizeTopic(user.topic);
+       if (normalized !== (user.topic ?? "")) {
+           queueNeedsNormalization = true;
+           return { ...user, topic: normalized };
+       }
+       return user;
+   });
+
+   if (queueNeedsNormalization) {
+       await updateWaitingUsers(existingUsers);
+   }
+
    const alreadyInQueue = existingUsers.find((u) => u.userId === userId && !u.matched);
 
    // If user already waiting, check based on elapsed time
@@ -194,7 +332,7 @@ export const startMatching = async (req, res) => {
        const elapsed = Date.now() - alreadyInQueue.joinedAt;
 
        // Use findBestMatch (same difficulty required, topic preferred)
-       const match = await findBestMatch(alreadyInQueue);
+    const match = await findBestMatch(alreadyInQueue);
        if (match) {
            await handleMatch(alreadyInQueue, match);
            const matchData = JSON.parse(await redis.get(`match:${userId}`));
@@ -215,12 +353,12 @@ export const startMatching = async (req, res) => {
    }
 
    // immediately add to waiting queue
-   const newUser = { userId, difficulty, topic, joinedAt: Date.now(), matched: false};
+        const newUser = { userId, difficulty, topic: normalizedTopic, joinedAt: Date.now(), matched: false};
    await redis.rpush("waitingUsers", JSON.stringify(newUser));
    console.log(`User ${userId} added to waiting queue.`);
 
    // Check for difficulty match first within 30s
-   const match = await findBestMatch({userId, difficulty, topic});
+    const match = await findBestMatch({ userId, difficulty, topic: normalizedTopic });
    if (match) {
     await handleMatch(newUser, match);
        const matchData = JSON.parse(await redis.get(`match:${userId}`));
@@ -305,11 +443,25 @@ export const confirmMatch = async (req, res) => {
            || otherData.matchedWith?.difficulty
            || "";
 
-       const topicsMatch = currentCriteria.topic
-           && otherCriteria.topic
-           && currentCriteria.topic === otherCriteria.topic;
+       const currentCriteriaTopic = normalizeTopic(currentCriteria.topic);
+       const otherCriteriaTopic = normalizeTopic(otherCriteria.topic);
+       const matchedWithTopicCurrent = normalizeTopic(currentData.matchedWith?.topic);
+       const matchedWithTopicOther = normalizeTopic(otherData.matchedWith?.topic);
 
-       const sessionTopicRaw = topicsMatch ? currentCriteria.topic : "";
+       const topicsMatch = currentCriteriaTopic
+           && otherCriteriaTopic
+           && currentCriteriaTopic === otherCriteriaTopic;
+
+       let sessionTopicRaw = "";
+       if (topicsMatch) {
+           sessionTopicRaw = currentCriteriaTopic;
+       } else {
+           sessionTopicRaw = currentCriteriaTopic
+               || otherCriteriaTopic
+               || matchedWithTopicCurrent
+               || matchedWithTopicOther
+               || "";
+       }
 
        const sessionDifficulty = sessionDifficultyRaw ? sessionDifficultyRaw.trim() : null;
        const sessionTopic = sessionTopicRaw ? sessionTopicRaw.trim() : null;
