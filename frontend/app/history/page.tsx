@@ -5,6 +5,7 @@ import { Eye } from "lucide-react"
 import { getUserAttempts, type Attempt } from "../../services/history"
 import { useAuth } from "../../contexts/auth-context"
 import { AppHeader } from "../../components/navigation/AppHeader"
+import {getQuestion} from "../../services/question";
 
 export default function AttemptHistoryPage() {
   const [attempts, setAttempts] = useState<Attempt[]>([])
@@ -18,7 +19,21 @@ export default function AttemptHistoryPage() {
 
       try {
         const data = await getUserAttempts(user.id)
-        setAttempts(data)
+
+        //fetch question details for each attempt
+        const questionDetails = await Promise.all(
+          data.map(async (attempt) => {
+            const question = await getQuestion(attempt.questionId)
+            return {
+              ...attempt,
+              questionTitle: question ? question.title : "Unknown Question",
+                difficulty: question ? question.difficulty : "Easy",
+            }
+          }),
+        )
+        console.log("attempts", attempts)
+        setAttempts(questionDetails)
+
       } catch (error) {
         console.error("Error fetching attempts:", error)
       } finally {
@@ -27,6 +42,8 @@ export default function AttemptHistoryPage() {
     }
     fetchData()
   }, [user])
+
+
 
   const filteredAttempts = attempts.filter((attempt) =>
     attempt.questionTitle.toLowerCase().includes(searchQuery.toLowerCase()),

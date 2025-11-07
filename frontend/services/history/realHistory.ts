@@ -9,13 +9,15 @@ export interface Attempt {
   duration: string
 }
 
+const API_URL = process.env.NEXT_PUBLIC_QUESTION_SERVICE_URL
+
 export interface AdminAttempt extends Attempt {
   userName: string
   userId: string
 }
 
 export async function getUserAttempts(userId: string): Promise<Attempt[]> {
-  const response = await fetch(`/api/users/${userId}/attempts`, {
+  const response = await fetch(`${API_URL}/history/user/${userId}`, {
     headers: {
       Authorization: `Bearer ${localStorage.getItem("auth_token")}`,
     },
@@ -23,6 +25,35 @@ export async function getUserAttempts(userId: string): Promise<Attempt[]> {
 
   if (!response.ok) {
     throw new Error("Failed to fetch user attempts")
+  }
+
+  const data = await response.json()
+  return Array.isArray(data) ? data : []
+}
+
+export async function createPendingAttempt(attemptData: {
+  userId: string
+  questionId: string
+}): Promise<Attempt> {
+  const payload = {
+    userId: attemptData.userId,
+    questionId: attemptData.questionId,
+    solution: "",
+    actions: {},
+    attemptedAt: new Date().toISOString(),
+  }
+
+  const response = await fetch(`${API_URL}/history`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${localStorage.getItem("auth_token")}`,
+    },
+    body: JSON.stringify(payload),
+  })
+
+  if (!response.ok) {
+    throw new Error("Failed to create pending attempt")
   }
 
   return response.json()

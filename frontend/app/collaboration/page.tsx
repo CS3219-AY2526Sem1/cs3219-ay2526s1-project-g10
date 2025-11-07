@@ -11,6 +11,7 @@ import { getActiveSession, leaveSession, type MatchQuestion } from "../../servic
 import { useSessionStore } from "../../store/useSessionStore"
 import { useAuthStore } from "../../store/useAuthStore"
 import { Button } from "../../components/ui/button"
+import {createPendingAttempt} from "../../services/history/realHistory";
 
 const CollaborationEditor = dynamic(
     () => import("./components/CollaborationEditor"),
@@ -135,6 +136,20 @@ const CollaborationPage = () => {
 
         setSession(activeSession)
         setQuestion(activeSession.question ?? null)
+
+        //recrod attempt in db
+        if(activeSession.question && currentUser) {
+        try {
+          const pendingAttempt = await createPendingAttempt({
+            userId: currentUser.id,
+            questionId: String(activeSession.question.id),
+            })
+
+          setSession((prev ) => ({ ...prev, attemptId: pendingAttempt.id }))
+        } catch (attemptError) {
+            console.error("Failed to create pending attempt for collaboration session", attemptError)
+          }
+        }
         setQuestionError(null)
       } catch (error) {
         if (isCancelled) return
