@@ -22,17 +22,56 @@ const toExampleText = (value: unknown): string => {
   }
 }
 
-const normalizeExamples = (examples: MatchQuestion["examples"]): MatchQuestionExample[] => {
-  if (!examples) return []
-  if (!Array.isArray(examples)) return []
+type NormalizedExample = {
+  input?: string
+  output?: string
+  explanation?: string
+  text?: string
+  image?: string
+}
 
-  return examples
-    .map((example) => ({
-      input: toExampleText(example?.input),
-      output: toExampleText(example?.output),
-      explanation: example?.explanation ? toExampleText(example?.explanation) : undefined,
-    }))
-    .filter((example) => example.input || example.output || example.explanation)
+const toOptionalString = (value: unknown): string | undefined => {
+  const raw = toExampleText(value)
+  const trimmed = raw.trim()
+  return trimmed.length > 0 ? trimmed : undefined
+}
+
+const normalizeExamples = (examples: MatchQuestion["examples"]): NormalizedExample[] => {
+  if (!examples || !Array.isArray(examples)) {
+    return []
+  }
+
+  return examples.reduce<NormalizedExample[]>((normalized, rawExample) => {
+    let result: NormalizedExample | null = null
+
+    if (typeof rawExample === "string") {
+      const text = toOptionalString(rawExample)
+      result = text ? { text } : null
+    } else if (rawExample && typeof rawExample === "object") {
+      const record = rawExample as Record<string, unknown>
+      const input = toOptionalString(record.input ?? record.inputs)
+      const output = toOptionalString(record.output ?? record.outputs)
+      const explanation = toOptionalString(record.explanation ?? record.explanations ?? record.reason)
+      const text = toOptionalString(record.text ?? record.description ?? record.details)
+      const imageCandidate = record.image ?? record.imageUrl ?? record.imageURL ?? record.diagram ?? record.figure
+      const image = typeof imageCandidate === "string" && imageCandidate.trim().length > 0 ? imageCandidate.trim() : undefined
+
+      if (input || output || explanation || text || image) {
+        const normalizedExample: NormalizedExample = {}
+        if (input) normalizedExample.input = input
+        if (output) normalizedExample.output = output
+        if (explanation) normalizedExample.explanation = explanation
+        if (text) normalizedExample.text = text
+        if (image) normalizedExample.image = image
+        result = normalizedExample
+      }
+    }
+
+    if (result) {
+      normalized.push(result)
+    }
+    return normalized
+  }, [])
 }
 
 export default function ProblemDescriptionPanel({ question, loading, error }: Props) {
@@ -115,6 +154,18 @@ export default function ProblemDescriptionPanel({ question, loading, error }: Pr
                   {example.explanation && (
                     <div>
                       <strong className="text-blue-200">Explanation:</strong> {example.explanation}
+                    </div>
+                  )}
+                  {example.text && (
+                    <div className={example.input || example.output || example.explanation ? "mt-2" : undefined}>
+                      <strong className="text-blue-200">Example:</strong>
+                      <p className="mt-1 whitespace-pre-wrap text-sm text-slate-200">{example.text}</p>
+                    </div>
+                  )}
+                  {example.image && (
+                    <div className="mt-3 overflow-hidden rounded border border-slate-600 bg-slate-900">
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img src={example.image} alt="Example illustration" className="w-full object-contain" />
                     </div>
                   )}
                 </li>
