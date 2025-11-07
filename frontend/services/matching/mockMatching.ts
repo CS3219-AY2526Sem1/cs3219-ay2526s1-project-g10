@@ -26,7 +26,7 @@ const MOCK_QUESTION: MatchQuestion = {
     },
   ],
   difficulty: "EASY",
-  topic: "Arrays & Strings",
+  topic: "Array",
 }
 
 let mockRoomId: string | null = null
@@ -54,8 +54,8 @@ export async function matchWithUser(userId: string): Promise<string> {
     roomId: mockRoomId,
     partnerId: userId,
     partnerUsername: `User ${userId}`,
-    difficulty: "EASY",
-    topic: "Arrays & Strings",
+  difficulty: "EASY",
+  topic: "Array",
     question: MOCK_QUESTION,
     createdAt: Date.now(),
   }
