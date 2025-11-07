@@ -1,6 +1,8 @@
 "use client"
 
+import { useState } from "react"
 import type { MatchQuestion, MatchQuestionExample } from "../../../services/matching"
+import { Button } from "../../../components/ui/button"
 
 type Props = {
   question: MatchQuestion | null
@@ -78,6 +80,7 @@ export default function ProblemDescriptionPanel({ question, loading, error }: Pr
   const normalizedExamples = normalizeExamples(question?.examples ?? null)
   const constraints = Array.isArray(question?.constraints) ? question?.constraints : []
   const descriptionImages = Array.isArray(question?.descriptionImages) ? question.descriptionImages : []
+  const [showSolution, setShowSolution] = useState(false)
 
   return (
     <div className="w-1/2 bg-slate-800 p-8 border-r overflow-auto text-white">
@@ -177,6 +180,29 @@ export default function ProblemDescriptionPanel({ question, loading, error }: Pr
             <div className="mt-6">
               <h2 className="text-xl font-semibold mb-2 text-blue-300">Follow-up</h2>
               <p className="text-sm text-slate-200 whitespace-pre-wrap">{question.followUp}</p>
+            </div>
+          )}
+
+          {question.solution && (
+            <div className="mt-6">
+              <div className="flex items-center justify-between gap-3">
+                <h2 className="text-xl font-semibold text-blue-300">Solution</h2>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setShowSolution((prev) => !prev)}
+                >
+                  {showSolution ? "Hide solution" : "Show solution"}
+                </Button>
+              </div>
+              {showSolution && (
+                <div className="mt-3 rounded-lg border border-slate-700 bg-slate-900 p-4">
+                  <pre className="whitespace-pre-wrap text-sm text-slate-100 overflow-auto max-h-96">
+                    {question.solution}
+                  </pre>
+                </div>
+              )}
             </div>
           )}
         </>
