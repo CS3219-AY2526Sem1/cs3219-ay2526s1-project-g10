@@ -64,4 +64,19 @@ router.patch("/:attemptId", async (req, res) => {
     }
 });
 
+//PATCH /history/:attemptId/duration - Updates only the duration of a specific question attempt
+router.patch("/:attemptId/duration", async (req, res) => {
+    const { attemptId } = req.params;
+    const { duration } = req.body;
+    try {
+        const updatedAttempt = await prisma.questionAttempt.update({
+            where: { id: parseInt(attemptId) },
+            data: { duration: parseInt(duration) },
+        });
+        res.json(updatedAttempt);
+    } catch (error) {
+        console.error("Error updating question attempt duration:", error);
+        res.status(500).json({ error: "Internal Server Error" });
+    }
+});
 export default router;

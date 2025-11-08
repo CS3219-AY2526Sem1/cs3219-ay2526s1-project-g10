@@ -43,6 +43,7 @@ export interface MatchQuestion {
 export interface MatchSession {
   sessionId?: string
   roomId: string
+  attemptId?: string | null
   partnerId: string
   partnerUsername?: string
   difficulty?: string | null

@@ -11,7 +11,7 @@ import { getActiveSession, leaveSession, type MatchQuestion } from "../../servic
 import { useSessionStore } from "../../store/useSessionStore"
 import { useAuthStore } from "../../store/useAuthStore"
 import { Button } from "../../components/ui/button"
-import {createPendingAttempt} from "../../services/history/realHistory";
+import {createPendingAttempt, updateAttemptDuration} from "../../services/history/realHistory";
 
 const CollaborationEditor = dynamic(
     () => import("./components/CollaborationEditor"),
@@ -37,6 +37,8 @@ const CollaborationPage = () => {
   const [confirmLeaveOpen, setConfirmLeaveOpen] = useState(false)
   const [isLeaving, setIsLeaving] = useState(false)
   const [leaveError, setLeaveError] = useState<string | null>(null)
+  // store duration of session
+  const startTimeRef = useRef<Date | null>(null)
 
   const participants = useMemo(() => {
     const entries: { name: string; isCurrentUser?: boolean }[] = []
@@ -74,10 +76,23 @@ const CollaborationPage = () => {
 
     try {
       await leaveSession()
+
+      // update duration of attempt if exists
+      if(session.attemptId && startTimeRef.current) {
+        const endTime = new Date()
+        const durationSeconds = Math.floor((endTime.getTime() - startTimeRef.current.getTime()) / 1000)
+        try {
+          await updateAttemptDuration(session.attemptId, String(durationSeconds))
+        } catch (durationError) {
+          console.error("Failed to update attempt duration after leaving collaboration session", durationError)
+        }
+      }
+
       clearSession()
       clearRoomId()
       setQuestion(null)
       setConfirmLeaveOpen(false)
+
       router.replace("/matching?notice=session-ended")
     } catch (error) {
       manualLeaveRef.current = false
@@ -140,17 +155,28 @@ const CollaborationPage = () => {
 
         //recrod attempt in db
         if(activeSession.question && currentUser) {
+          //only create pending attempt if not already exists
+          if(activeSession.attemptId) {
+            return
+          }
         try {
           const pendingAttempt = await createPendingAttempt({
             userId: currentUser.id,
             questionId: String(activeSession.question.id),
             })
 
-          setSession((prev ) => ({ ...prev, attemptId: pendingAttempt.id }))
+            //store attemptId in session
+          const updatedSession = { ...activeSession, attemptId: pendingAttempt.id, }
+          setSession(updatedSession)
+
+          // record start time
+            startTimeRef.current = new Date()
+
         } catch (attemptError) {
             console.error("Failed to create pending attempt for collaboration session", attemptError)
           }
         }
+
         setQuestionError(null)
       } catch (error) {
         if (isCancelled) return

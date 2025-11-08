@@ -59,6 +59,24 @@ export async function createPendingAttempt(attemptData: {
   return response.json()
 }
 
+// Update attempt
+export async function updateAttemptDuration(attemptId: string, duration: string): Promise<Attempt> {
+  const response = await fetch(`${API_URL}/history/${attemptId}/duration`, {
+    method: "PATCH",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${localStorage.getItem("auth_token")}`,
+    },
+    body: JSON.stringify({ duration }),
+  })
+
+  if (!response.ok) {
+    throw new Error("Failed to update attempt duration")
+  }
+
+  return response.json()
+}
+
 export async function getAllAttempts(): Promise<AdminAttempt[]> {
   const response = await fetch("/api/admin/attempts", {
     headers: {

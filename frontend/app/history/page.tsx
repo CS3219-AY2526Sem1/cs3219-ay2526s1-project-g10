@@ -62,6 +62,27 @@ export default function AttemptHistoryPage() {
     }
   }
 
+  // transforms ISO dateTime string to readable format
+  const formatDate = (isoString: string) => {
+    const date = new Date(isoString)
+
+    const day = date.getDate();
+    const month = date.toLocaleString('default', { month: 'short' }); // e.g., Jan, Feb
+    const year = date.getFullYear();
+    const hours = date.getHours();
+    const minutes = date.getMinutes();
+    const amPm = hours >= 12 ? 'PM' : 'AM';
+    const formattedHours = hours % 12 || 12; // Convert to 12-hour format
+
+    const formattedDate = `${day.toString().padStart(2, '0')}/${month
+      .toString()
+      .padStart(2, '0')}/${year} ${formattedHours
+      .toString()
+      .padStart(2, '0')}:${minutes.toString().padStart(2, '0')} ${amPm}`;
+
+    return formattedDate;
+  };
+
   const getStatusColor = (status: string) => {
     return status === "Completed" ? "bg-blue-100 text-blue-800" : "bg-orange-100 text-orange-800"
   }
@@ -84,7 +105,7 @@ export default function AttemptHistoryPage() {
                 <th className="px-6 py-4 text-left text-sm font-semibold text-gray-900">Status</th>
                 <th className="px-6 py-4 text-left text-sm font-semibold text-gray-900">Date</th>
                 <th className="px-6 py-4 text-left text-sm font-semibold text-gray-900">Duration</th>
-                <th className="px-6 py-4 text-left text-sm font-semibold text-gray-900">Score</th>
+                {/*<th className="px-6 py-4 text-left text-sm font-semibold text-gray-900">Score</th>*/}
                 <th className="px-6 py-4 text-right text-sm font-semibold text-gray-900">Actions</th>
               </tr>
             </thead>
@@ -119,9 +140,9 @@ export default function AttemptHistoryPage() {
                         {attempt.status}
                       </span>
                     </td>
-                    <td className="px-6 py-4 text-sm text-gray-600">{attempt.date}</td>
+                    <td className="px-6 py-4 text-sm text-gray-600">{formatDate(attempt.attemptedAt)}</td>
                     <td className="px-6 py-4 text-sm text-gray-600">{attempt.duration}</td>
-                    <td className="px-6 py-4 text-sm text-gray-600">{attempt.score}%</td>
+                    {/*<td className="px-6 py-4 text-sm text-gray-600">{attempt.score}%</td>*/}
                     <td className="px-6 py-4 text-right">
                       <button className="p-2 hover:bg-gray-100 rounded-lg transition-colors">
                         <Eye className="w-4 h-4 text-gray-600" />
