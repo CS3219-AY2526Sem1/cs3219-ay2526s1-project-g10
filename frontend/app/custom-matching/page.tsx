@@ -181,19 +181,6 @@ export default function CustomRoomPage() {
               <div className="space-y-6">
                 <div>
                   <label className="mb-2 block text-sm font-medium text-gray-700">
-                    Room Name (Optional)
-                  </label>
-                  <input
-                    type="text"
-                    value={roomName}
-                    onChange={(e) => setRoomName(e.target.value)}
-                    placeholder="My Coding Room"
-                    className="w-full rounded-xl border border-gray-300 px-4 py-3 focus:border-blue-500 focus:outline-none"
-                  />
-                </div>
-
-                <div>
-                  <label className="mb-2 block text-sm font-medium text-gray-700">
                     Difficulty *
                   </label>
                   <div className="grid grid-cols-3 gap-3">
