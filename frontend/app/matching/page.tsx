@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react"
 import { cancelMatching, findMatches, matchWithUser, type MatchResult, type MatchCriteria } from "../../services/matching"
 import { useRouter, useSearchParams } from "next/navigation"
 import { AppHeader } from "../../components/navigation/AppHeader"
-import { User } from "lucide-react"
+import { User, Users } from "lucide-react"
 
 export default function MatchPage() {
   //const [selectedLanguage, setSelectedLanguage] = useState<string | null>(null)
@@ -53,20 +53,43 @@ export default function MatchPage() {
     }
   }, [])
 
+//   useEffect(() => {
+//     const noticeParam = searchParams.get("notice")
+//     if (noticeParam === "session-ended") {
+//       if (noticeHandledRef.current) {
+//         return
+//       }
+//       noticeHandledRef.current = true
+//       const message = "The collaboration room was closed."
+//       setNotice(message)
+//       setSearchMessage(message)
+//       router.replace("/matching")
+//     } else {
+//       noticeHandledRef.current = false
+//     }
+//   }, [searchParams, router])
+
   useEffect(() => {
     const noticeParam = searchParams.get("notice")
-    if (noticeParam === "session-ended") {
-      if (noticeHandledRef.current) {
-        return
-      }
-      noticeHandledRef.current = true
-      const message = "The collaboration room was closed."
-      setNotice(message)
-      setSearchMessage(message)
-      router.replace("/matching")
-    } else {
-      noticeHandledRef.current = false
+    if (!noticeParam || noticeHandledRef.current) return
+
+    noticeHandledRef.current = true
+
+    let message = ""
+    switch (noticeParam) {
+      case "session-ended":
+        message = "The collaboration room was closed."
+        break
+      case "custom-room-ended":
+        message = "You left the custom room."
+        break
+      default:
+        message = "The session has ended."
     }
+
+    setNotice(message)
+    setSearchMessage(message)
+    router.replace("/matching")
   }, [searchParams, router])
 
   const stopRoomPolling = () => {
@@ -187,6 +210,10 @@ export default function MatchPage() {
     }
   }
 
+  const handleCustomRoom = () => {
+    router.push("/custom-matching")
+  }
+
   return (
     <div className="min-h-screen bg-gray-50">
       <AppHeader />
@@ -198,6 +225,15 @@ export default function MatchPage() {
             {notice}
           </div>
         )}
+        <div className="mb-6">
+          <button
+            onClick={handleCustomRoom}
+            className="flex items-center gap-2 rounded-full bg-blue-500 px-6 py-3 font-medium text-white transition-colors hover:bg-blue-600"
+          >
+            <Users className="h-5 w-5" />
+            Create/Join Custom Room
+          </button>
+        </div>
         <div className="grid grid-cols-1 gap-8 lg:grid-cols-[320px_1fr]">
           {/* Matching Criteria Sidebar */}
           <div className="rounded-3xl bg-white p-6 shadow-sm">

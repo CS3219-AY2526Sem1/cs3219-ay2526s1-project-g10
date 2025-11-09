@@ -49,4 +49,6 @@ export interface MatchSession {
   topic?: string | null
   question?: MatchQuestion | null
   createdAt?: number
+  isCustomRoom?: boolean
+  roomCode?: string
 }
