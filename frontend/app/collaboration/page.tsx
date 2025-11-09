@@ -82,13 +82,16 @@ const CollaborationPage = () => {
     setIsLeaving(true)
     setLeaveError(null)
 
+    const wasCustomRoom = session.isCustomRoom
+
     try {
       await leaveSession()
       clearSession()
       clearRoomId()
       setQuestion(null)
       setConfirmLeaveOpen(false)
-      router.replace(session?.isCustomRoom ? "/matching?notice=custom-room-ended" : "/matching?notice=session-ended")
+      const noticeParam = wasCustomRoom ? "left-custom-room" : "session-ended"
+      router.replace(`/matching?notice=${noticeParam}`)
     } catch (error) {
       manualLeaveRef.current = false
       console.error("Failed to leave collaboration session", error)
@@ -129,12 +132,15 @@ const CollaborationPage = () => {
         if (isCancelled) return
 
         if (!activeSession) {
+          const wasCustomRoom = session?.isCustomRoom
+
           clearSession()
           clearRoomId()
           setQuestion(null)
           setQuestionError("Your collaboration session is no longer active.")
           if (!manualLeaveRef.current) {
-            router.replace("/matching?notice=session-ended")
+            const noticeParam = wasCustomRoom ? "left-custom-room" : "session-ended"
+            router.replace(`/matching?notice=${noticeParam}`)
           }
           return
         }
@@ -225,10 +231,14 @@ const CollaborationPage = () => {
         previousSessionRef.current = session
         return
       }
+
+      const wasCustomRoom = previousSession.isCustomRoom
+
       clearRoomId()
       setQuestion(null)
       setQuestionError("Your collaboration session has ended.")
-      router.replace(previousSession?.isCustomRoom ? "/matching?notice=custom-room-ended" : "/matching?notice=session-ended")
+      const noticeParam = wasCustomRoom ? "left-custom-room" : "session-ended"
+      router.replace(`/matching?notice=${noticeParam}`)
     }
     previousSessionRef.current = session
   }, [session, router, clearRoomId])

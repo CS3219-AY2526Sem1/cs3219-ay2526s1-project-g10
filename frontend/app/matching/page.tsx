@@ -71,25 +71,28 @@ export default function MatchPage() {
 
   useEffect(() => {
     const noticeParam = searchParams.get("notice")
-    if (!noticeParam || noticeHandledRef.current) return
 
-    noticeHandledRef.current = true
-
-    let message = ""
-    switch (noticeParam) {
-      case "session-ended":
-        message = "The collaboration room was closed."
-        break
-      case "custom-room-ended":
-        message = "You left the custom room."
-        break
-      default:
-        message = "The session has ended."
+    if (noticeParam === "session-ended") {
+      if (noticeHandledRef.current) {
+        return
+      }
+      noticeHandledRef.current = true
+      const message = "The collaboration room was closed."
+      setNotice(message)
+      setSearchMessage(message)
+      router.replace("/matching")
+    } else if (noticeParam === "left-custom-room") {
+      if (noticeHandledRef.current) {
+        return
+      }
+      noticeHandledRef.current = true
+      const message = "You have left the custom room."
+      setNotice(message)
+      setSearchMessage(message)
+      router.replace("/matching")
+    } else {
+      noticeHandledRef.current = false
     }
-
-    setNotice(message)
-    setSearchMessage(message)
-    router.replace("/matching")
   }, [searchParams, router])
 
   const stopRoomPolling = () => {
