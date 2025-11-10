@@ -185,26 +185,26 @@ export default function ProfilePage() {
 
   if (loading || !profile) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <p className="text-gray-600">Loading profile...</p>
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center">
+        <p className="text-gray-600 dark:text-gray-300">Loading profile...</p>
       </div>
     )
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 transition-colors">
       <AppHeader />
 
       {/* Main Content */}
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center px-6 py-8">
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center px-6 py-8 transition-colors">
         <div className="w-full max-w-md">
           {/* Profile Info Card */}
-          <div className="bg-white rounded-2xl p-6 shadow-sm">
+          <div className="bg-white dark:bg-gray-800 rounded-2xl p-6 shadow-sm transition-colors">
             <div className="flex flex-col items-center text-center mb-6">
-              <div className="flex h-24 w-24 items-center justify-center rounded-full border-4 border-gray-900 bg-blue-200 mb-4">
-                <User className="h-12 w-12 text-gray-900" />
+              <div className="flex h-24 w-24 items-center justify-center rounded-full border-4 border-gray-900 dark:border-gray-100 bg-blue-200 dark:bg-gray-700 mb-4 transition-colors">
+                <User className="h-12 w-12 text-gray-900 dark:text-gray-100" />
               </div>
-              <span className="inline-flex px-3 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+              <span className="inline-flex px-3 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800 dark:bg-gray-700 dark:text-gray-100 transition-colors">
                 {profile.isAdmin ? "Admin" : "User"}
               </span>
             </div>
@@ -212,20 +212,20 @@ export default function ProfilePage() {
             {/* Message Display */}
             {message && (
               <div className={`mb-4 p-3 rounded-lg text-sm ${
-                message.type === "success" ? "bg-green-100 text-green-800" : "bg-red-100 text-red-800"
+                message.type === "success" ? "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200" : "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200"
               }`}>
                 {message.text}
               </div>
             )}
 
             {/* Username Field */}
-            <div className="border-t border-gray-200 pt-4 mb-4">
+            <div className="border-t border-gray-200 dark:border-gray-700 pt-4 mb-4">
               <div className="flex items-center justify-between mb-2">
-                <span className="text-sm font-medium text-gray-700">Username</span>
+                <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Username</span>
                 {editingField !== "username" && (
                   <button
                     onClick={() => setEditingField("username")}
-                    className="text-blue-600 hover:text-blue-800 text-xs"
+                    className="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 text-xs"
                     disabled={editingField !== null}
                   >
                     <Edit2 className="h-3 w-3" />
@@ -236,7 +236,7 @@ export default function ProfilePage() {
                 <div className="flex gap-2">
                   <input
                     type="text"
-                    className="flex-1 border border-gray-300 rounded-lg px-3 py-2 text-sm"
+                    className="flex-1 border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
                     value={username}
                     onChange={(e) => setUsername(e.target.value)}
                     disabled={saving}
@@ -251,24 +251,24 @@ export default function ProfilePage() {
                   <button
                     onClick={handleCancel}
                     disabled={saving}
-                    className="p-2 rounded-lg bg-gray-300 text-gray-700 hover:bg-gray-400"
+                    className="p-2 rounded-lg bg-gray-300 dark:bg-gray-600 text-gray-700 dark:text-gray-100 hover:bg-gray-400 dark:hover:bg-gray-500"
                   >
                     <X className="h-4 w-4" />
                   </button>
                 </div>
               ) : (
-                <p className="text-gray-900">{profile.username}</p>
+                <p className="text-gray-900 dark:text-gray-100">{profile.username}</p>
               )}
             </div>
 
             {/* Email Field */}
-            <div className="border-t border-gray-200 pt-4 mb-4">
+            <div className="border-t border-gray-200 dark:border-gray-700 pt-4 mb-4">
               <div className="flex items-center justify-between mb-2">
-                <span className="text-sm font-medium text-gray-700">Email</span>
+                <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Email</span>
                 {editingField !== "email" && (
                   <button
                     onClick={() => setEditingField("email")}
-                    className="text-blue-600 hover:text-blue-800 text-xs"
+                    className="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 text-xs"
                     disabled={editingField !== null}
                   >
                     <Edit2 className="h-3 w-3" />
@@ -280,7 +280,7 @@ export default function ProfilePage() {
                   <div className="flex gap-2">
                     <input
                       type="email"
-                      className="flex-1 border border-gray-300 rounded-lg px-3 py-2 text-sm"
+                      className="flex-1 border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
                       disabled={saving}
@@ -295,24 +295,24 @@ export default function ProfilePage() {
                     <button
                       onClick={handleCancel}
                       disabled={saving}
-                      className="p-2 rounded-lg bg-gray-300 text-gray-700 hover:bg-gray-400"
+                      className="p-2 rounded-lg bg-gray-300 dark:bg-gray-600 text-gray-700 dark:text-gray-100 hover:bg-gray-400 dark:hover:bg-gray-500"
                     >
                       <X className="h-4 w-4" />
                     </button>
                   </div>
-                  <p className="text-xs text-gray-500">
+                  <p className="text-xs text-gray-500 dark:text-gray-400">
                     A verification link will be sent to your new email address
                   </p>
                 </div>
               ) : (
-                <p className="text-gray-900">{profile.email}</p>
+                <p className="text-gray-900 dark:text-gray-100">{profile.email}</p>
               )}
             </div>
 
             {/* Joined Date */}
-            <div className="border-t border-gray-200 pt-4 mb-4">
-              <p className="text-sm text-gray-600">
-                <span className="font-medium text-gray-900">Joined:</span> {new Date(profile.createdAt).toLocaleDateString()}
+            <div className="border-t border-gray-200 dark:border-gray-700 pt-4 mb-4">
+              <p className="text-sm text-gray-600 dark:text-gray-300">
+                <span className="font-medium text-gray-900 dark:text-gray-100">Joined:</span> {new Date(profile.createdAt).toLocaleDateString()}
               </p>
             </div>
 
@@ -320,7 +320,7 @@ export default function ProfilePage() {
             <div className="space-y-2">
               <button
                 onClick={handleLogout}
-                className="w-full flex items-center justify-center gap-2 rounded-full bg-white border border-gray-300 px-6 py-3 text-sm font-medium text-gray-900 transition-colors hover:bg-gray-50"
+                className="w-full flex items-center justify-center gap-2 rounded-full bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 px-6 py-3 text-sm font-medium text-gray-900 dark:text-gray-100 transition-colors hover:bg-gray-50 dark:hover:bg-gray-600"
               >
                 <LogOut className="h-4 w-4" />
                 Log Out
