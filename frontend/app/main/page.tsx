@@ -15,7 +15,7 @@ export default function MainPage() {
 
           {/* Tagline */}
           <div className="space-y-4">
-            <p className="text-lg text-muted-foreground text-balance dark:text-gray-300 text-balance transition-colors">
+            <p className="text-lg text-muted-foreground dark:text-gray-300 text-balance transition-colors">
               Get started by reviewing or jump straight into collaborative coding!
             </p>
           </div>
