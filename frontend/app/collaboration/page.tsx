@@ -11,6 +11,8 @@ import { getActiveSession, leaveSession, type MatchQuestion } from "../../servic
 import { useSessionStore } from "../../store/useSessionStore"
 import { useAuthStore } from "../../store/useAuthStore"
 import { Button } from "../../components/ui/button"
+import GeminiChatBox from "./components/gemini-chatbot";
+
 
 const CollaborationEditor = dynamic(
     () => import("./components/CollaborationEditor"),
