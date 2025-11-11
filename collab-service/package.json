@@ -5,7 +5,7 @@
   "main": "index.js",
   "type": "module",
   "scripts": {
-    "dev": "nodemon app/server.js",
+    "dev": "nodemon app/index.js",
     "api": "node app/index.js",
     "test": "echo \"Error: no test specified\" && exit 1",
     "ws": "HOST=0.0.0.0 PORT=1234 y-websocket",
