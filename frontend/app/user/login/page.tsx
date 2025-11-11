@@ -18,7 +18,7 @@ export default function LoginPage() {
   }, [loading, user, next, router])
 
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center bg-gray-50 px-4">
+    <div className="min-h-screen flex flex-col items-center justify-center px-4">
       {message && (
         <div className="mb-4 p-3 rounded-lg text-sm bg-green-100 text-green-800 max-w-md w-full text-center">
           {message}

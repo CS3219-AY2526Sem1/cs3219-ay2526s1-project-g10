@@ -1,6 +1,7 @@
 "use client"
 
 import { useState } from "react"
+import { ThemeToggle } from "../navigation/ThemeToggle"
 
 export function Header() {
   const [isProfileOpen, setIsProfileOpen] = useState(false)
@@ -36,7 +37,8 @@ export function Header() {
             </nav>
           </div>
 
-          <div className="flex items-center relative">
+          <div className="flex items-center gap-2 relative">
+            <ThemeToggle />
             <button
               onClick={() => setIsProfileOpen(!isProfileOpen)}
               className="p-2 rounded-full hover:bg-primary-foreground/10 transition-colors"

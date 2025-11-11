@@ -30,10 +30,10 @@ export function ForgotPasswordForm() {
   }
 
   return (
-    <div className="w-full max-w-md rounded-lg border border-border bg-card text-card-foreground shadow-sm">
+    <div className="w-full max-w-md rounded-lg bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 p-6 shadow-sm transition-colors">
       <div className="flex flex-col space-y-1.5 p-6">
         <h3 className="text-2xl font-semibold tracking-tight text-balance">Reset your password</h3>
-        <p className="text-sm text-muted-foreground">
+        <p className="text-sm text-muted-foreground dark:text-gray-100">
           {isSubmitted
             ? "Check your email for a link to reset your password"
             : "Enter your email address and we'll send you a link to reset your password"}
@@ -54,6 +54,7 @@ export function ForgotPasswordForm() {
                 required
                 autoComplete="email"
                 disabled={isLoading}
+                className="dark:border-gray-600 dark:text-gray-100"
               />
             </div>
             <Button type="submit" className="w-full" disabled={isLoading}>

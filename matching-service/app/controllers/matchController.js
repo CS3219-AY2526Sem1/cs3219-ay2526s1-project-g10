@@ -581,6 +581,8 @@ export const getActiveSession = async (req, res) => {
            topic: session.topic,
            question: session.question ?? null,
            createdAt: session.createdAt,
+           isCustomRoom: session.isCustomRoom,
+           roomCode: session.roomCode,
        });
    } catch (error) {
        console.error("Error retrieving active session:", error);
@@ -627,6 +629,36 @@ export const endSession = async (req, res) => {
        }
 
        const session = JSON.parse(sessionValue);
+
+       if (session.isCustomRoom && session.roomCode) {
+           // For custom rooms, remove user from participants
+           await redis.srem(`customRoom:participants:${session.roomCode}`, userId);
+           await redis.del(`session:${userId}`);
+
+           // Check if room is empty
+           const remainingParticipants = await redis.smembers(`customRoom:participants:${session.roomCode}`);
+
+           if (remainingParticipants.length === 0) {
+               // Room is empty, delete it
+               await redis.del(`customRoom:${session.roomCode}`);
+               await redis.del(`customRoom:password:${session.roomCode}`);
+               await redis.del(`customRoom:participants:${session.roomCode}`);
+               await redis.del(`customRoom:lastActivity:${session.roomCode}`);
+
+               if (session.roomId) {
+                   await redis.srem("collab:activeRooms", session.roomId);
+               }
+
+               console.log(`Custom room ${session.roomCode} deleted (empty after session end)`);
+           }
+
+           return res.json({
+               success: true,
+               roomCode: session.roomCode,
+               isCustomRoom: true,
+           });
+       }
+
        const partnerId = session.partnerId;
        const roomId = session.roomId;
 

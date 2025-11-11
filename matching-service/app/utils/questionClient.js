@@ -16,6 +16,11 @@ export async function fetchRandomQuestion({ difficulty, topic }) {
   try {
     const response = await fetch(endpoint);
 
+    if (response.status === 404) {
+      // No question found for this topic + difficulty
+      return null;
+    }
+
     if (!response.ok) {
       const body = await response.text();
       throw new Error(`Question service error ${response.status}: ${body}`);
