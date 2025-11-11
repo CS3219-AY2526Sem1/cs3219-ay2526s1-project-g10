@@ -9,7 +9,7 @@
     "api": "node app/index.js",
     "test": "echo \"Error: no test specified\" && exit 1",
     "ws": "HOST=0.0.0.0 PORT=1234 y-websocket",
-    "start": "concurrently -k -n WS,API \"npm:ws\" \"npm:api\"" 
+    "start": "concurrently -k -n WS,API \"npm:ws\" \"npm:api\""
   },
   "keywords": [],
   "author": "",
@@ -25,6 +25,7 @@
   "dependencies": {
     "@prisma/client": "^6.16.2",
     "@prisma/extension-accelerate": "^2.0.2",
+    "axios": "^1.13.2",
     "bcrypt": "^5.1.1",
     "cors": "^2.8.5",
     "dotenv": "^16.4.5",
