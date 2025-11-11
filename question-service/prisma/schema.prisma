@@ -29,25 +29,25 @@ model Question {
 model QuestionAttempt {
   id          Int      @id @default(autoincrement())
   userId      String
-  questionId  Int
+  questionId  Int?
   attemptedAt DateTime @default(now())
   duration    Int?      // null if not completed
   status      AttemptStatus
   code        String? // null if not attempted
+  output      String?
   solution    String?
   actions     Json?
 
   //relation
   user      users     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  question  Question  @relation(fields: [questionId], references: [id], onDelete: Cascade)
+  question  Question?  @relation(fields: [questionId], references: [id], onDelete: Cascade)
   @@index([userId])
   @@index([questionId])
   @@map("question_attempts")
 }
 
 enum AttemptStatus {
-  PASSED
-  FAILED
+  COMPLETED
   PENDING
 }
 

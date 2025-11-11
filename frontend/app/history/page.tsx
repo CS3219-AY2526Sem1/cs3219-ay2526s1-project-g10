@@ -6,9 +6,12 @@ import { getUserAttempts, type Attempt } from "../../services/history"
 import { useAuth } from "../../contexts/auth-context"
 import { AppHeader } from "../../components/navigation/AppHeader"
 import {getQuestion} from "../../services/question";
+import AttemptDetailsDialog from "./components/attemptDetailsDialog";
 
 export default function AttemptHistoryPage() {
   const [attempts, setAttempts] = useState<Attempt[]>([])
+  const [selectedAttempt, setSelectedAttempt] = useState<Attempt | null>(null)
+  const [selectedQuestion, setSelectedQuestion] = useState<any>(null)
   const [searchQuery, setSearchQuery] = useState("")
   const [loading, setLoading] = useState(true)
   const { user } = useAuth()
@@ -87,6 +90,12 @@ export default function AttemptHistoryPage() {
     return status === "Completed" ? "bg-blue-100 text-blue-800" : "bg-orange-100 text-orange-800"
   }
 
+  const openAttemptDialog = async (attempt: Attempt) => {
+    const question = await getQuestion(attempt.questionId)
+    setSelectedQuestion(question)
+    setSelectedAttempt(attempt)
+  }
+
   return (
     <div className="min-h-screen bg-gray-50">
       <AppHeader />
@@ -104,7 +113,7 @@ export default function AttemptHistoryPage() {
                 <th className="px-6 py-4 text-left text-sm font-semibold text-gray-900">Difficulty</th>
                 <th className="px-6 py-4 text-left text-sm font-semibold text-gray-900">Status</th>
                 <th className="px-6 py-4 text-left text-sm font-semibold text-gray-900">Date</th>
-                <th className="px-6 py-4 text-left text-sm font-semibold text-gray-900">Duration</th>
+                {/*<th className="px-6 py-4 text-left text-sm font-semibold text-gray-900">Duration</th>*/}
                 {/*<th className="px-6 py-4 text-left text-sm font-semibold text-gray-900">Score</th>*/}
                 <th className="px-6 py-4 text-right text-sm font-semibold text-gray-900">Actions</th>
               </tr>
@@ -141,10 +150,12 @@ export default function AttemptHistoryPage() {
                       </span>
                     </td>
                     <td className="px-6 py-4 text-sm text-gray-600">{formatDate(attempt.attemptedAt)}</td>
-                    <td className="px-6 py-4 text-sm text-gray-600">{attempt.duration}</td>
+                    {/*<td className="px-6 py-4 text-sm text-gray-600">{attempt.duration}</td>*/}
                     {/*<td className="px-6 py-4 text-sm text-gray-600">{attempt.score}%</td>*/}
                     <td className="px-6 py-4 text-right">
-                      <button className="p-2 hover:bg-gray-100 rounded-lg transition-colors">
+                      <button className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+                              onClick={() => openAttemptDialog(attempt)}
+                      >
                         <Eye className="w-4 h-4 text-gray-600" />
                       </button>
                     </td>
@@ -155,6 +166,10 @@ export default function AttemptHistoryPage() {
           </table>
         </div>
       </div>
+
+      {selectedAttempt && selectedQuestion &&(
+          <AttemptDetailsDialog attempt={selectedAttempt} onClose={() => setSelectedAttempt(null)} question={selectedQuestion} />
+      )}
     </div>
   )
 }

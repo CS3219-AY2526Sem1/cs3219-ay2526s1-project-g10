@@ -1,5 +1,6 @@
 // Mock history service
 export interface Attempt {
+  questionId: string
   id: string
   questionTitle: string
   difficulty: "Easy" | "Medium" | "Hard"
@@ -23,6 +24,7 @@ const MOCK_USER_ATTEMPTS: Attempt[] = [
     score: 95,
     date: "2024-03-15",
     duration: "15 mins",
+    questionId: ""
   },
   {
     id: "2",
@@ -32,6 +34,7 @@ const MOCK_USER_ATTEMPTS: Attempt[] = [
     score: 88,
     date: "2024-03-14",
     duration: "25 mins",
+    questionId: ""
   },
   {
     id: "3",

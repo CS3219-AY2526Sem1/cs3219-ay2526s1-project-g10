@@ -3,7 +3,7 @@ export interface Attempt {
   id: string
   questionTitle: string
   difficulty: "Easy" | "Medium" | "Hard"
-  status: "Completed" | "In Progress" | "Failed"
+  status: "Completed" | "PENDING"
   score: number
   date: string
   duration: string
@@ -72,6 +72,31 @@ export async function updateAttemptDuration(attemptId: string, duration: string)
 
   if (!response.ok) {
     throw new Error("Failed to update attempt duration")
+  }
+
+  return response.json()
+}
+
+// Update attempt code, duration
+export async function updateAttempt( attemptId: string, updateData: Partial<
+{ code: string,
+  duration: string,
+  output: string,
+  status: "COMPLETED",
+  questionId: string
+}>
+): Promise<Attempt> {
+  const response = await fetch(`${API_URL}/history/${attemptId}`, {
+    method: "PATCH",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${localStorage.getItem("auth_token")}`,
+    },
+    body: JSON.stringify(updateData),
+  })
+
+  if (!response.ok) {
+    throw new Error("Failed to update attempt")
   }
 
   return response.json()

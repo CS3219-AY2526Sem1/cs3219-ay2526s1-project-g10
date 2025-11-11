@@ -11,7 +11,8 @@ import { getActiveSession, leaveSession, type MatchQuestion } from "../../servic
 import { useSessionStore } from "../../store/useSessionStore"
 import { useAuthStore } from "../../store/useAuthStore"
 import { Button } from "../../components/ui/button"
-import {createPendingAttempt, updateAttemptDuration} from "../../services/history/realHistory";
+import {createPendingAttempt, updateAttempt, updateAttemptDuration} from "../../services/history/realHistory";
+import {matchClient} from "../../network/axiosClient";
 
 const CollaborationEditor = dynamic(
     () => import("./components/CollaborationEditor"),
@@ -22,6 +23,7 @@ const CollaborationEditor = dynamic(
 const CollaborationPage = () => {
   const searchParams = useSearchParams()
   const roomId = searchParams.get("roomId")
+  const attemptId = searchParams.get("attemptId")
   const setRoomId = useRoomStore((state) => state.setRoomId)
   const clearRoomId = useRoomStore((state) => state.clearRoomId)
   const router = useRouter()
@@ -37,8 +39,10 @@ const CollaborationPage = () => {
   const [confirmLeaveOpen, setConfirmLeaveOpen] = useState(false)
   const [isLeaving, setIsLeaving] = useState(false)
   const [leaveError, setLeaveError] = useState<string | null>(null)
+  const [localAttemptId, setAttemptId] = useState(null)
   // store duration of session
-  const startTimeRef = useRef<Date | null>(null)
+  // const startTimeRef = useRef<Date | null>(null)
+  // const [attemptRecorded, setAttemptRecorded] = useState(false)
 
   const participants = useMemo(() => {
     const entries: { name: string; isCurrentUser?: boolean }[] = []
@@ -53,6 +57,7 @@ const CollaborationPage = () => {
     }
     return entries
   }, [currentUser, session?.partnerId, session?.partnerUsername])
+
 
   const handleRequestLeave = () => {
     setLeaveError(null)
@@ -78,15 +83,15 @@ const CollaborationPage = () => {
       await leaveSession()
 
       // update duration of attempt if exists
-      if(session.attemptId && startTimeRef.current) {
-        const endTime = new Date()
-        const durationSeconds = Math.floor((endTime.getTime() - startTimeRef.current.getTime()) / 1000)
-        try {
-          await updateAttemptDuration(session.attemptId, String(durationSeconds))
-        } catch (durationError) {
-          console.error("Failed to update attempt duration after leaving collaboration session", durationError)
-        }
-      }
+      // if(session.attemptId && startTimeRef.current) {
+      //   const endTime = new Date()
+      //   const durationSeconds = Math.floor((endTime.getTime() - startTimeRef.current.getTime()) / 1000)
+      //   try {
+      //     await updateAttemptDuration(session.attemptId, String(durationSeconds))
+      //   } catch (durationError) {
+      //     console.error("Failed to update attempt duration after leaving collaboration session", durationError)
+      //   }
+      // }
 
       clearSession()
       clearRoomId()
@@ -165,12 +170,16 @@ const CollaborationPage = () => {
             questionId: String(activeSession.question.id),
             })
 
+          setAttemptId(pendingAttempt.id); // update local state to pass to CollaborationEditor
+          console.log("Created pending attempt:", pendingAttempt)
+
             //store attemptId in session
           const updatedSession = { ...activeSession, attemptId: pendingAttempt.id, }
           setSession(updatedSession)
+          console.log("session after adding attemptId:", updatedSession)
 
-          // record start time
-            startTimeRef.current = new Date()
+          // // record start time
+          //   startTimeRef.current = new Date()
 
         } catch (attemptError) {
             console.error("Failed to create pending attempt for collaboration session", attemptError)
@@ -226,12 +235,17 @@ const CollaborationPage = () => {
         <AppHeader />
         <div className="flex flex-1">
           <ProblemDescriptionPanel question={question} loading={questionLoading} error={questionError} />
+          {/*{up?.attemptId && (*/}
+          {/*    // makes sure CollaborationEditor is only rendered when attemptId is available*/}
+          {/*    console.log("Rendering CollaborationEditor with attemptId:", session.attemptId),*/}
           <CollaborationEditor
             roomId={roomId}
             participants={participants}
             onRequestLeave={handleRequestLeave}
             leaving={isLeaving}
+            attemptId={localAttemptId}
           />
+            {/*)}*/}
         </div>
       </div>
       {confirmLeaveOpen && (

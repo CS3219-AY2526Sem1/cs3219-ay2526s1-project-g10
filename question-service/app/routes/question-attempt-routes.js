@@ -12,7 +12,7 @@ router.post("/", async (req, res) => {
         const newAttempt = await prisma.questionAttempt.create({
             data: {
                 userId,
-                questionId: parseInt(questionId),
+                questionId: questionId? parseInt(questionId) : null,
                 solution,
                 actions,
                 attemptedAt,
@@ -46,16 +46,27 @@ router.get("/user/:userId", async (req, res) => {
 // PATCH /question-attempts/:attemptId - Updates the status of a specific question attempt
 router.patch("/:attemptId", async (req, res) => {
     const {attemptId} = req.params;
-    const {status, duration, code, actions} = req.body;
+    const {questionId, code, duration, output, status} = req.body;
     try {
+        const updatedData = {};
+        if (questionId) {
+            updatedData.questionId = parseInt(questionId);
+        }
+        if (code) {
+            updatedData.code = code;
+        }
+        if (duration) {
+            updatedData.duration = parseInt(duration);
+        }
+        if (output) {
+            updatedData.output = output;
+        }
+        if (status) {
+            updatedData.status = status;
+        }
         const updatedAttempt = await prisma.questionAttempt.update({
             where: {id: parseInt(attemptId)},
-            data: {
-            status,
-            duration,
-            code,
-            actions,
-            },
+            data: updatedData,
         });
         res.json(updatedAttempt);
     } catch (error) {
