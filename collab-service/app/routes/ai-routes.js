@@ -22,10 +22,10 @@ ${code || "No code provided."}
 "${message}"
 
 ---
-Based on the question and the code above, give a helpful, accurate, and concise response.
+Based on the question and the code above, give a helpful, accurate, and concise response within 1300 characters.
 If the user asks for a hint, guide them toward the solution without giving away the full code.
 If they ask for debugging help, point out the likely issue and suggest fixes.
-Always explain your reasoning clearly.
+Explain your reasoning clearly.
     `;
 
     const response = await axios.post(
