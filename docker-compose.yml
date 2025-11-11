@@ -75,8 +75,8 @@ services:
     build: ./api-gateway
     ports:
       - "8080:8080"
-    # env_file:
-    #   - ./api-gateway/.env
+    env_file:
+      - ./api-gateway/.env
     depends_on:
       - user-service
       - question-service
