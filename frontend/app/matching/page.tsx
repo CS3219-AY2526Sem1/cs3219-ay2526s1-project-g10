@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react"
 import { cancelMatching, findMatches, matchWithUser, type MatchResult, type MatchCriteria } from "../../services/matching"
 import { useRouter, useSearchParams } from "next/navigation"
 import { AppHeader } from "../../components/navigation/AppHeader"
-import { User } from "lucide-react"
+import { User, Users } from "lucide-react"
 
 export default function MatchPage() {
   //const [selectedLanguage, setSelectedLanguage] = useState<string | null>(null)
@@ -53,14 +53,40 @@ export default function MatchPage() {
     }
   }, [])
 
+//   useEffect(() => {
+//     const noticeParam = searchParams.get("notice")
+//     if (noticeParam === "session-ended") {
+//       if (noticeHandledRef.current) {
+//         return
+//       }
+//       noticeHandledRef.current = true
+//       const message = "The collaboration room was closed."
+//       setNotice(message)
+//       setSearchMessage(message)
+//       router.replace("/matching")
+//     } else {
+//       noticeHandledRef.current = false
+//     }
+//   }, [searchParams, router])
+
   useEffect(() => {
     const noticeParam = searchParams.get("notice")
+
     if (noticeParam === "session-ended") {
       if (noticeHandledRef.current) {
         return
       }
       noticeHandledRef.current = true
       const message = "The collaboration room was closed."
+      setNotice(message)
+      setSearchMessage(message)
+      router.replace("/matching")
+    } else if (noticeParam === "left-custom-room") {
+      if (noticeHandledRef.current) {
+        return
+      }
+      noticeHandledRef.current = true
+      const message = "You have left the custom room."
       setNotice(message)
       setSearchMessage(message)
       router.replace("/matching")
@@ -187,21 +213,34 @@ export default function MatchPage() {
     }
   }
 
+  const handleCustomRoom = () => {
+    router.push("/custom-matching")
+  }
+
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 transition-colors">
       <AppHeader />
 
       {/* Main Content */}
       <div className="mx-auto max-w-7xl px-6 py-8">
         {notice && (
-          <div className="mb-6 rounded-xl border border-blue-200 bg-blue-50 px-4 py-3 text-sm text-blue-900">
+          <div className="mb-6 rounded-xl border border-blue-200 dark:border-gray-700 bg-blue-50 dark:bg-gray-800 px-4 py-3 text-sm text-blue-900 dark:text-gray-100 transition-colors">
             {notice}
           </div>
         )}
+        <div className="mb-6">
+          <button
+            onClick={handleCustomRoom}
+            className="flex items-center gap-2 rounded-full bg-blue-500 dark:bg-gray-700 px-6 py-3 font-medium text-white dark:text-gray-100 transition-colors hover:bg-blue-600 dark:hover:bg-gray-600"
+          >
+            <Users className="h-5 w-5" />
+            Create/Join Custom Room
+          </button>
+        </div>
         <div className="grid grid-cols-1 gap-8 lg:grid-cols-[320px_1fr]">
           {/* Matching Criteria Sidebar */}
-          <div className="rounded-3xl bg-white p-6 shadow-sm">
-            <h2 className="mb-6 text-xl font-semibold text-gray-900">Matching Criteria</h2>
+          <div className="rounded-3xl bg-white dark:bg-gray-800 p-6 shadow-sm transition-colors">
+            <h2 className="mb-6 text-xl font-semibold text-gray-900 dark:text-gray-100">Matching Criteria</h2>
 
             {/* Programming Language */}
             {/* <div className="mb-6">
@@ -223,7 +262,7 @@ export default function MatchPage() {
 
             {/* Difficulty */}
             <div className="mb-6">
-              <h3 className="mb-3 font-medium text-gray-900">Difficulty</h3>
+              <h3 className="mb-3 font-medium text-gray-900 dark:text-gray-200">Difficulty</h3>
               <div className="space-y-2">
                 {difficulties.map((diff) => (
                   <label key={diff} className="flex items-center gap-2 cursor-pointer">
@@ -233,7 +272,7 @@ export default function MatchPage() {
                       checked={selectedDifficulty === diff}
                       onChange={() => setSelectedDifficulty(diff)}
                     />
-                    <span className="text-sm text-gray-900">{diff}</span>
+                    <span className="text-sm text-gray-900 dark:text-gray-200">{diff}</span>
                   </label>
                 ))}
               </div>
@@ -241,7 +280,7 @@ export default function MatchPage() {
 
             {/* Topics */}
             <div className="mb-8">
-              <h3 className="mb-3 font-medium text-gray-900">Topics</h3>
+              <h3 className="mb-3 font-medium text-gray-900 dark:text-gray-200">Topics</h3>
               <div className="space-y-2">
                 {topics.map((topic) => (
                   <label key={topic} className="flex items-center gap-2 cursor-pointer">
@@ -251,7 +290,7 @@ export default function MatchPage() {
                       checked={selectedTopic === topic}
                       onChange={() => setSelectedTopic(topic)}
                     />
-                    <span className="text-sm text-gray-900">{topic}</span>
+                    <span className="text-sm text-gray-900 dark:text-gray-200">{topic}</span>
                   </label>
                 ))}
               </div>
@@ -261,14 +300,14 @@ export default function MatchPage() {
             <button
               onClick={handleFindMatch}
               disabled={isLoading || isFindMatchDisabled}
-              className={`w-full rounded-full px-6 py-3 font-medium text-gray-900 transition-colors
-                        ${isLoading || isFindMatchDisabled ? "bg-blue-200 cursor-not-allowed" : "bg-blue-300 hover:bg-blue-400"}`}
+              className={`w-full rounded-full px-6 py-3 font-medium text-gray-900 dark:text-gray-100 transition-colors
+                        ${isLoading || isFindMatchDisabled ? "bg-blue-200 dark:bg-gray-600 cursor-not-allowed" : "bg-blue-300 dark:bg-gray-700 hover:bg-blue-400 dark:hover:bg-gray-600"}`}
             >
               {isLoading ? "FINDING..." : "FIND MATCH"}
             </button>
 
             {isFindMatchDisabled && (
-              <p className="text-center text-xs text-red-500">
+              <p className="text-center text-xs text-red-500 dark:text-red-400">
                 Please select one option from each category.
               </p>
             )}
@@ -277,10 +316,10 @@ export default function MatchPage() {
 
           {/* Matching Results */}
           <div>
-            <h2 className="mb-6 text-2xl font-semibold text-gray-900">Matching Results</h2>
+            <h2 className="mb-6 text-2xl font-semibold text-gray-900 dark:text-gray-100">Matching Results</h2>
             {isLoading ? (
-              <div className="rounded-2xl bg-white p-12 text-center shadow-sm">
-                <p className="text-gray-600">{searchMessage}</p>
+              <div className="rounded-2xl bg-white dark:bg-gray-800 p-12 text-center shadow-sm transition-colors">
+                <p className="text-gray-600 dark:text-gray-300">{searchMessage}</p>
               </div>
             ) : matchResults.length > 0 ? (
               <div className="space-y-4">
@@ -288,13 +327,13 @@ export default function MatchPage() {
                   <div key={match.id} className="flex items-center justify-between rounded-2xl bg-white p-6 shadow-sm">
                     <div className="flex items-center gap-4">
                       <div className="flex h-14 w-14 items-center justify-center rounded-full border-2 border-gray-900 bg-blue-200">
-                        <User className="h-7 w-7 text-gray-900" />
+                        <User className="h-7 w-7 text-gray-900 dark:text-gray-100" />
                       </div>
-                      <span className="text-xl font-medium text-gray-900">{match.name}</span>
+                      <span className="text-xl font-medium text-gray-900 dark:text-gray-100">{match.name}</span>
                     </div>
                     <button
                       onClick={() => handleMatchNow(match.id)}
-                      className="rounded-full bg-blue-300 px-6 py-2.5 text-sm font-medium text-gray-900 transition-colors hover:bg-blue-400"
+                      className="rounded-full bg-blue-300 dark:bg-gray-700 px-6 py-2.5 text-sm font-medium text-gray-900 dark:text-gray-100 transition-colors hover:bg-blue-400 dark:hover:bg-gray-600"
                     >
                       MATCH NOW
                     </button>
@@ -302,7 +341,7 @@ export default function MatchPage() {
                 ))}
               </div>
             ) : (
-              <p className="text-gray-600">
+              <p className="text-gray-600 dark:text-gray-300">
                 {searchMessage || "No matches found. Select criteria and click 'FIND MATCH' to search."}
               </p>
             )}

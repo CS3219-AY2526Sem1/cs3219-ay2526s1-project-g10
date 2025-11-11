@@ -55,10 +55,10 @@ export function SignupForm() {
   }
 
   return (
-    <div className="w-full max-w-md rounded-lg border border-border bg-card text-card-foreground shadow-sm">
+    <div className="w-full max-w-md rounded-lg bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 p-6 shadow-sm transition-colors">
       <div className="flex flex-col space-y-1.5 p-6">
         <h3 className="text-2xl font-semibold tracking-tight text-balance">Create an account</h3>
-        <p className="text-sm text-muted-foreground">Enter your information to create your account</p>
+        <p className="text-sm text-muted-foreground dark:text-gray-100">Enter your information to create your account</p>
       </div>
       <div className="p-6 pt-0">
         <form onSubmit={handleSubmit} className="space-y-4">
@@ -74,6 +74,7 @@ export function SignupForm() {
               required
               autoComplete="name"
               disabled={isLoading}
+              className="dark:border-gray-600 dark:text-gray-100"
             />
           </div>
           <div className="space-y-2">
@@ -87,6 +88,7 @@ export function SignupForm() {
               required
               autoComplete="email"
               disabled={isLoading}
+              className="dark:border-gray-600 dark:text-gray-100"
             />
           </div>
           <div className="space-y-2">
@@ -101,6 +103,7 @@ export function SignupForm() {
               autoComplete="new-password"
               disabled={isLoading}
               minLength={8}
+              className="dark:border-gray-600 dark:text-gray-100"
             />
           </div>
           <Button type="submit" className="w-full" disabled={isLoading}>
@@ -109,7 +112,7 @@ export function SignupForm() {
         </form>
       </div>
       <div className="flex items-center p-6 pt-0">
-        <div className="text-sm text-center text-muted-foreground w-full">
+        <div className="text-sm text-center text-muted-foreground w-full dark:text-gray-300">
           Already have an account?{" "}
           <Link href="/user/login" className="font-medium text-foreground hover:underline">
             Sign in

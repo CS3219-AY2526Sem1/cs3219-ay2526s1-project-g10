@@ -109,7 +109,9 @@ export function SessionWatcher() {
   useEffect(() => {
     const previousSession = previousSessionRef.current
     if (previousSession && !session) {
-      router.replace("/matching?notice=session-ended")
+      const wasCustomRoom = previousSession.isCustomRoom
+      const noticeParam = wasCustomRoom ? "left-custom-room" : "session-ended"
+      router.replace(`/matching?notice=${noticeParam}`)
     }
     previousSessionRef.current = session
   }, [session, router])
