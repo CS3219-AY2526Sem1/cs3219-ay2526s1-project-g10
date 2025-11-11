@@ -9,3 +9,19 @@ export type { MatchResult, MatchCriteria, MatchSearchOutcome, MatchQuestion, Mat
 const matchingService = USE_MOCK ? mockMatching : realMatching
 
 export const { findMatches, matchWithUser, cancelMatching, getActiveSession, leaveSession } = matchingService
+
+export {
+  createCustomRoom,
+  joinCustomRoom,
+  getCustomRoomInfo,
+  leaveCustomRoom,
+} from "./customMatching"
+
+export type {
+  CustomRoomCreateRequest,
+  CustomRoomCreateResponse,
+  CustomRoomJoinRequest,
+  CustomRoomJoinResponse,
+  CustomRoomParticipant,
+  CustomRoomInfo,
+} from "./customMatching"

@@ -12,7 +12,8 @@ import { useSessionStore } from "../../store/useSessionStore"
 import { useAuthStore } from "../../store/useAuthStore"
 import { Button } from "../../components/ui/button"
 import GeminiChatBox from "./components/gemini-chatbot";
-
+import { getCustomRoomInfo, type CustomRoomParticipant } from "../../services/matching"
+import { Copy } from "lucide-react"
 
 const CollaborationEditor = dynamic(
     () => import("./components/CollaborationEditor"),
@@ -39,8 +40,17 @@ const CollaborationPage = () => {
   const [confirmLeaveOpen, setConfirmLeaveOpen] = useState(false)
   const [isLeaving, setIsLeaving] = useState(false)
   const [leaveError, setLeaveError] = useState<string | null>(null)
+  const [customRoomParticipants, setCustomRoomParticipants] = useState<CustomRoomParticipant[]>([])
+  const [roomCode, setRoomCode] = useState<string | null>(null)
 
   const participants = useMemo(() => {
+    // For custom rooms, use fetched participants
+    if (session?.isCustomRoom && customRoomParticipants.length > 0) {
+      return customRoomParticipants.map(p => ({
+        name: p.username,
+        isCurrentUser: p.userId === currentUser?.id,
+      }))
+    }
     const entries: { name: string; isCurrentUser?: boolean }[] = []
     if (currentUser) {
       const selfName = currentUser.username?.trim() || currentUser.email?.trim() || "You"
@@ -52,7 +62,7 @@ const CollaborationPage = () => {
       entries.push({ name: `User ${session.partnerId}` })
     }
     return entries
-  }, [currentUser, session?.partnerId, session?.partnerUsername])
+  }, [currentUser, session?.partnerId, session?.partnerUsername, customRoomParticipants])
 
   const handleRequestLeave = () => {
     setLeaveError(null)
@@ -74,13 +84,16 @@ const CollaborationPage = () => {
     setIsLeaving(true)
     setLeaveError(null)
 
+    const wasCustomRoom = session.isCustomRoom
+
     try {
       await leaveSession()
       clearSession()
       clearRoomId()
       setQuestion(null)
       setConfirmLeaveOpen(false)
-      router.replace("/matching?notice=session-ended")
+      const noticeParam = wasCustomRoom ? "left-custom-room" : "session-ended"
+      router.replace(`/matching?notice=${noticeParam}`)
     } catch (error) {
       manualLeaveRef.current = false
       console.error("Failed to leave collaboration session", error)
@@ -121,12 +134,15 @@ const CollaborationPage = () => {
         if (isCancelled) return
 
         if (!activeSession) {
+          const wasCustomRoom = session?.isCustomRoom
+
           clearSession()
           clearRoomId()
           setQuestion(null)
           setQuestionError("Your collaboration session is no longer active.")
           if (!manualLeaveRef.current) {
-            router.replace("/matching?notice=session-ended")
+            const noticeParam = wasCustomRoom ? "left-custom-room" : "session-ended"
+            router.replace(`/matching?notice=${noticeParam}`)
           }
           return
         }
@@ -161,6 +177,49 @@ const CollaborationPage = () => {
   }, [roomId, clearSession, clearRoomId, router, setSession])
 
   useEffect(() => {
+    if (!session?.isCustomRoom || !session.roomCode) {
+      setCustomRoomParticipants([])
+      return
+    }
+
+    let isCancelled = false
+
+    const fetchParticipants = async () => {
+      try {
+        const roomInfo = await getCustomRoomInfo(session.roomCode!)
+        console.log("Fetched participants:", roomInfo.participants)
+        if (!isCancelled) {
+          setCustomRoomParticipants(roomInfo.participants)
+        }
+      } catch (error) {
+        if (!isCancelled) {
+          console.error("Failed to fetch custom room participants:", error)
+        }
+      }
+    }
+
+    void fetchParticipants()
+
+    // Poll for participant updates every 5 seconds
+    const interval = setInterval(() => {
+      void fetchParticipants()
+    }, 5000)
+
+    return () => {
+      isCancelled = true
+      clearInterval(interval)
+    }
+  }, [session?.isCustomRoom, session?.roomCode])
+
+  useEffect(() => {
+    if (session?.isCustomRoom && session?.roomCode) {
+      setRoomCode(session.roomCode)
+    } else {
+      setRoomCode(null)
+    }
+  }, [session])
+
+  useEffect(() => {
     if (session?.question) {
       setQuestion(session.question)
       setQuestionError(null)
@@ -174,10 +233,14 @@ const CollaborationPage = () => {
         previousSessionRef.current = session
         return
       }
+
+      const wasCustomRoom = previousSession.isCustomRoom
+
       clearRoomId()
       setQuestion(null)
       setQuestionError("Your collaboration session has ended.")
-      router.replace("/matching?notice=session-ended")
+      const noticeParam = wasCustomRoom ? "left-custom-room" : "session-ended"
+      router.replace(`/matching?notice=${noticeParam}`)
     }
     previousSessionRef.current = session
   }, [session, router, clearRoomId])
@@ -186,6 +249,28 @@ const CollaborationPage = () => {
     <>
       <div className="flex min-h-screen flex-col bg-blue-100">
         <AppHeader />
+        {roomCode && (
+          <div className="bg-blue-500 px-6 py-3 text-white">
+            <div className="mx-auto flex max-w-7xl items-center justify-between">
+              <div className="flex items-center gap-3">
+                <span className="text-sm font-medium">Room Code:</span>
+                <span className="rounded-lg bg-white/20 px-4 py-1 font-mono text-lg font-bold tracking-wider">
+                  {roomCode}
+                </span>
+              </div>
+              <button
+                onClick={() => {
+                  navigator.clipboard.writeText(roomCode)
+                  alert('Room code copied to clipboard!')
+                }}
+                className="flex items-center gap-2 rounded-lg bg-white/20 px-4 py-2 text-sm font-medium transition-colors hover:bg-white/30"
+              >
+                <Copy className="h-4 w-4" />
+                Copy Code
+              </button>
+            </div>
+          </div>
+        )}
         <div className="flex flex-1">
           <ProblemDescriptionPanel question={question} loading={questionLoading} error={questionError} />
           <CollaborationEditor
@@ -206,8 +291,10 @@ const CollaborationPage = () => {
           <div className="w-full max-w-md rounded-xl bg-white p-6 shadow-xl">
             <h2 className="text-xl font-semibold text-slate-900">Leave collaboration session?</h2>
             <p className="mt-2 text-sm text-slate-600">
-              Leaving will close the collaboration room for both participants. Your partner will be notified and
-              redirected back to matching.
+              {session?.isCustomRoom
+                ? "Leaving will remove you from this custom room. Other participants can continue collaborating. You can rejoin later with the room details if others are still collaborating."
+                : "Leaving will close the collaboration room for both participants. Your partner will be notified and redirected back to matching."
+              }
             </p>
             {leaveError && <p className="mt-3 text-sm text-red-500">{leaveError}</p>}
             <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:justify-end">

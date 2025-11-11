@@ -3,6 +3,18 @@
 
 @custom-variant dark (&:is(.dark *));
 
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+body {
+  @apply bg-white text-black transition-colors duration-300;
+}
+
+.dark body {
+  @apply bg-gray-900 text-white;
+}
+
 :root {
   --background: oklch(0.99 0 0);
   --foreground: oklch(0.15 0 0);
