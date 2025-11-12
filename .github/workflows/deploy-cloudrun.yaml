@@ -85,17 +85,6 @@ jobs:
           echo "REDIS_HOST=$REDIS_HOST" >> "$GITHUB_ENV"
           echo "REDIS_PORT=$REDIS_PORT" >> "$GITHUB_ENV"
 
-          YW_HOST='${{ vars.YW_HOST }}'
-          if [ -z "$YW_HOST" ]; then
-            YW_HOST='127.0.0.1'
-          fi
-          echo "YW_HOST=$YW_HOST" >> "$GITHUB_ENV"
-
-          YW_PORT='${{ vars.YW_PORT }}'
-          if [ -z "$YW_PORT" ]; then
-            YW_PORT='1234'
-          fi
-          echo "YW_PORT=$YW_PORT" >> "$GITHUB_ENV"
 
       - name: Build and push container images
         run: |
@@ -117,6 +106,49 @@ jobs:
 
           docker build -t "$IMAGE_ROOT/frontend:${IMAGE_TAG}" ./frontend
           docker push "$IMAGE_ROOT/frontend:${IMAGE_TAG}"
+      
+      - name: Deploy collab-service
+        run: |
+          set -euxo pipefail
+          EXTRA_FLAGS=""
+          if [ -n "$VPC_CONNECTOR" ]; then
+            EXTRA_FLAGS="--vpc-connector=$VPC_CONNECTOR --vpc-egress=all-traffic"
+          fi
+          gcloud run deploy collab-service \
+            --image="$IMAGE_ROOT/collab-service:${IMAGE_TAG}" \
+            --region="${{ env.REGION }}" \
+            --service-account="$RUNTIME_SERVICE_ACCOUNT" \
+            --allow-unauthenticated \
+            --set-secrets=GEMINI_API_KEY=GEMINI_API_KEY:latest \
+            $EXTRA_FLAGS
+
+          COLLAB_URL=$(gcloud run services describe collab-service --region="${{ env.REGION }}" --format='value(status.url)')
+          echo "COLLAB_SERVICE_URL=$COLLAB_URL" >> "$GITHUB_ENV"
+
+      - name: Deploy API Gateway
+        run: |
+          set -euxo pipefail
+          for required in USER_SERVICE_URL MATCHING_SERVICE_URL QUESTION_SERVICE_URL COLLAB_SERVICE_URL; do
+            if [ -z "${!required:-}" ]; then
+              echo "::error::${required} is not set; ensure previous deployments succeeded." >&2
+              exit 1
+            fi
+          done
+          EXTRA_FLAGS=""
+          if [ -n "$VPC_CONNECTOR" ]; then
+            EXTRA_FLAGS="--vpc-connector=$VPC_CONNECTOR --vpc-egress=all-traffic"
+          fi
+          gcloud run deploy api-gateway \
+            --image="$IMAGE_ROOT/api-gateway:${IMAGE_TAG}" \
+            --region="${{ env.REGION }}" \
+            --service-account="$RUNTIME_SERVICE_ACCOUNT" \
+            --allow-unauthenticated \
+            --set-secrets=JWT_SECRET=JWT_SECRET:latest \
+            --set-env-vars=USER_SERVICE_URL=$USER_SERVICE_URL,MATCHING_SERVICE_URL=$MATCHING_SERVICE_URL,QUESTION_SERVICE_URL=$QUESTION_SERVICE_URL,COLLAB_SERVICE_URL=$COLLAB_SERVICE_URL \
+            $EXTRA_FLAGS
+
+          API_GATEWAY_URL=$(gcloud run services describe api-gateway --region="${{ env.REGION }}" --format='value(status.url)')
+          echo "API_GATEWAY_URL=$API_GATEWAY_URL" >> "$GITHUB_ENV"
 
       - name: Deploy user-service
         run: |
@@ -191,49 +223,6 @@ jobs:
           MATCHING_URL=$(gcloud run services describe matching-service --region="${{ env.REGION }}" --format='value(status.url)')
           echo "MATCHING_SERVICE_URL=$MATCHING_URL" >> "$GITHUB_ENV"
 
-      - name: Deploy collab-service
-        run: |
-          set -euxo pipefail
-          EXTRA_FLAGS=""
-          if [ -n "$VPC_CONNECTOR" ]; then
-            EXTRA_FLAGS="--vpc-connector=$VPC_CONNECTOR --vpc-egress=all-traffic"
-          fi
-          gcloud run deploy collab-service \
-            --image="$IMAGE_ROOT/collab-service:${IMAGE_TAG}" \
-            --region="${{ env.REGION }}" \
-            --service-account="$RUNTIME_SERVICE_ACCOUNT" \
-            --allow-unauthenticated \
-            --set-secrets=GEMINI_API_KEY=GEMINI_API_KEY:latest \
-            --set-env-vars=YW_HOST=$YW_HOST,YW_PORT=$YW_PORT \
-            $EXTRA_FLAGS
-
-          COLLAB_URL=$(gcloud run services describe collab-service --region="${{ env.REGION }}" --format='value(status.url)')
-          echo "COLLAB_SERVICE_URL=$COLLAB_URL" >> "$GITHUB_ENV"
-
-      - name: Deploy API Gateway
-        run: |
-          set -euxo pipefail
-          for required in USER_SERVICE_URL MATCHING_SERVICE_URL QUESTION_SERVICE_URL COLLAB_SERVICE_URL; do
-            if [ -z "${!required:-}" ]; then
-              echo "::error::${required} is not set; ensure previous deployments succeeded." >&2
-              exit 1
-            fi
-          done
-          EXTRA_FLAGS=""
-          if [ -n "$VPC_CONNECTOR" ]; then
-            EXTRA_FLAGS="--vpc-connector=$VPC_CONNECTOR --vpc-egress=all-traffic"
-          fi
-          gcloud run deploy api-gateway \
-            --image="$IMAGE_ROOT/api-gateway:${IMAGE_TAG}" \
-            --region="${{ env.REGION }}" \
-            --service-account="$RUNTIME_SERVICE_ACCOUNT" \
-            --allow-unauthenticated \
-            --set-secrets=JWT_SECRET=JWT_SECRET:latest \
-            --set-env-vars=USER_SERVICE_URL=$USER_SERVICE_URL,MATCHING_SERVICE_URL=$MATCHING_SERVICE_URL,QUESTION_SERVICE_URL=$QUESTION_SERVICE_URL,COLLAB_SERVICE_URL=$COLLAB_SERVICE_URL \
-            $EXTRA_FLAGS
-
-          API_GATEWAY_URL=$(gcloud run services describe api-gateway --region="${{ env.REGION }}" --format='value(status.url)')
-          echo "API_GATEWAY_URL=$API_GATEWAY_URL" >> "$GITHUB_ENV"
 
       - name: Deploy frontend
         run: |

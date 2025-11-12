@@ -1,7 +1,8 @@
 import express from "express";
 import cors from "cors";
-import { createProxyMiddleware } from "http-proxy-middleware";
 import http from "http";
+import { WebSocketServer } from "ws";
+import { setupWSConnection } from "y-websocket/bin/utils";
 import aiRoutes from "./routes/ai-routes.js";
 
 const app = express();
@@ -16,74 +17,68 @@ app.use(
   })
 );
 app.use(express.json());
-app.get("/healthz", (_req, res) => res.json({ ok: true }));
-app.use("/ai", aiRoutes);
 
-const YW_HOST = process.env.YW_HOST || "127.0.0.1";
-const YW_PORT = Number(process.env.YW_PORT || 1234);
-const YW_TARGET = `http://${YW_HOST}:${YW_PORT}`;
+const wsPath = (process.env.COLLAB_WS_PATH || "/collab").replace(/\/$/, "");
+
+app.get("/", (_req, res) => {
+  res.json({ ok: true });
+});
+
+app.get("/healthz", (_req, res) => res.json({ ok: true }));
+app.get(wsPath, (_req, res) => res.json({ ok: true }));
+app.use("/ai", aiRoutes);
 
 // (Future) JWT check:
 // app.use("/collab", verifyRoomTokenMiddleware);
 
-function validateProxyTarget(target) {
-  if (!target || target.includes("0.0.0.0")) {
-    console.warn(
-      "Collab proxy target is invalid or points to 0.0.0.0; skipping proxy setup. Set YW_HOST/YW_PORT to a reachable y-websocket endpoint."
-    );
-    return false;
-  }
-  if (!YW_HOST) {
-    console.warn("YW_HOST is not configured; collab proxy will be disabled.");
-    return false;
-  }
-  return true;
-}
-
-const shouldProxy = validateProxyTarget(YW_TARGET);
-
-let collabProxy;
-if (shouldProxy) {
-  collabProxy = createProxyMiddleware({
-    target: YW_TARGET,
-    changeOrigin: true,
-    ws: true,
-    pathRewrite: { "^/collab": "" },
-    onError(err, req, res) {
-      console.error("Collab proxy encountered an error", err);
-      if (!res.headersSent) {
-        res.status(502).json({ error: "Collaboration service unavailable" });
-      }
-    },
-  });
-
-  app.use("/collab", collabProxy);
-} else {
-  app.use("/collab", (_req, res) => {
-    res.status(503).json({ error: "Collaboration server not configured" });
-  });
-}
-
 export const server = http.createServer(app);
 
-if (shouldProxy && collabProxy) {
-  server.on("upgrade", (req, socket, head) => {
-    if (req.url && req.url.startsWith("/collab")) {
-      collabProxy.upgrade(req, socket, head);
-    } else {
-      socket.destroy();
+function extractDocName(requestUrl) {
+  if (!requestUrl) {
+    return "room";
+  }
+
+  const [path, query] = requestUrl.split("?");
+  if (query) {
+    const params = new URLSearchParams(query);
+    const roomParam = params.get("room");
+    if (roomParam) {
+      return roomParam;
     }
-  });
+  }
+
+  let docPath = path;
+  if (docPath.startsWith(wsPath)) {
+    docPath = docPath.slice(wsPath.length);
+  }
+
+  return docPath.replace(/^\//, "") || "room";
 }
+const wss = new WebSocketServer({ noServer: true });
+
+wss.on("connection", (ws, req) => {
+  const docName = extractDocName(req.url ?? "");
+
+  setupWSConnection(ws, req, {
+    gc: true,
+    docName,
+  });
+});
+
+server.on("upgrade", (req, socket, head) => {
+  if (!req.url || !req.url.startsWith(wsPath)) {
+    socket.destroy();
+    return;
+  }
+
+  wss.handleUpgrade(req, socket, head, (ws) => {
+    wss.emit("connection", ws, req);
+  });
+});
 
 const PORT = Number(process.env.PORT || 8080);
 
 server.listen(PORT, "0.0.0.0", () => {
-  console.log(`Collab API (HTTP) on http://0.0.0.0:${PORT}`);
-  console.log(`Gemini AI route ready at http://0.0.0.0:${PORT}/ai`);
-  if (shouldProxy) {
-    console.log(`Proxying WS at ws://0.0.0.0:${PORT}/collab  ->  ${YW_TARGET}`);
-  } else {
-    console.log("Collab proxy disabled; configure YW_HOST/YW_PORT to enable WebSocket forwarding.");
-  }
+  console.log(`Collab service listening on http://0.0.0.0:${PORT}`);
+  console.log(`WebSocket endpoint available at ws://0.0.0.0:${PORT}${wsPath}`);
 });

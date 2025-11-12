@@ -6,16 +6,13 @@
   "type": "module",
   "scripts": {
     "dev": "nodemon app/index.js",
-    "api": "node app/index.js",
-    "test": "echo \"Error: no test specified\" && exit 1",
-    "ws": "HOST=0.0.0.0 PORT=1234 y-websocket",
-    "start": "concurrently -k -n WS,API \"npm:ws\" \"npm:api\""
+    "start": "node app/index.js",
+    "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "devDependencies": {
-    "http-proxy-middleware": "^3.0.5",
     "nodemon": "^3.1.4",
     "prisma": "^6.16.2",
     "tsx": "^4.20.5"
@@ -23,17 +20,15 @@
   "dependencies": {
     "@prisma/client": "^6.16.2",
     "@prisma/extension-accelerate": "^2.0.2",
-    "@y/websocket-server": "^0.1.1",
     "axios": "^1.13.2",
     "bcrypt": "^5.1.1",
-    "concurrently": "^9.2.1",
     "cors": "^2.8.5",
     "dotenv": "^16.4.5",
     "express": "^4.19.2",
     "jsonwebtoken": "^9.0.2",
     "mongoose": "^8.5.4",
     "ws": "^8.18.3",
-    "y-websocket": "^3.0.0",
+    "y-websocket": "^1.5.4",
     "yjs": "^13.6.27"
   }
 }
