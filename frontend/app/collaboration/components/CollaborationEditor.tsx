@@ -118,7 +118,6 @@ export default function CollaborationEditor({ roomId, participants, onRequestLea
         const attemptToUpdateId = storedAttemptId.current ? storedAttemptId.current.toString() : attemptId!;
         await updateAttempt(attemptToUpdateId, {
           code: editorRef.current ? editorRef.current.getValue() : "",
-          duration: "0",
           output: newOutput,
           status: "COMPLETED",
         })

@@ -13,11 +13,9 @@ router.post("/", async (req, res) => {
             data: {
                 userId,
                 questionId: questionId? parseInt(questionId) : null,
-                solution,
                 actions,
                 attemptedAt,
                 status: "PENDING", // Default status
-                duration: 0, // Default duration
                 code: "", // Default code
                 questionJson: questionJson || null,
             },

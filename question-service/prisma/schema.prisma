@@ -10,59 +10,52 @@ datasource db {
 }
 
 model Question {
-  id                Int        @id @default(autoincrement())
+  id                Int               @id @default(autoincrement())
   title             String
   description       String
-  descriptionImages String[]   @default([])
-  constraints       String[]   @default([])
+  descriptionImages String[]          @default([])
+  constraints       String[]          @default([])
   examples          Json?
   solution          String
   difficulty        Difficulty
   language          String?
   topic             String
   followUp          String?
-  createdAt         DateTime   @default(now())
-
-  //relation
+  createdAt         DateTime          @default(now())
   attempts          QuestionAttempt[]
 }
-model QuestionAttempt {
-  id          Int      @id @default(autoincrement())
-  userId      String
-  questionId  Int?
-  questionJson Json?
-  attemptedAt DateTime @default(now())
-  duration    Int?      // null if not completed
-  status      AttemptStatus
-  code        String? // null if not attempted
-  output      String?
-  solution    String?
-  actions     Json?
 
-  //relation
-  user      users     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  question  Question?  @relation(fields: [questionId], references: [id], onDelete: Cascade)
+model QuestionAttempt {
+  id           Int           @id @default(autoincrement())
+  userId       String
+  questionId   Int?
+  attemptedAt  DateTime      @default(now())
+  code         String?
+  status       AttemptStatus
+  output       String?
+  questionJson Json?
+  question     Question?     @relation(fields: [questionId], references: [id], onDelete: Cascade)
+  user         users         @relation(fields: [userId], references: [id], onDelete: Cascade)
+
   @@index([userId])
   @@index([questionId])
   @@map("question_attempts")
 }
 
+model users {
+  id               String            @id(map: "User_pkey")
+  username         String            @unique(map: "User_username_key")
+  email            String            @unique(map: "User_email_key")
+  password         String?
+  createdAt        DateTime          @default(now())
+  isAdmin          Boolean           @default(false)
+  supabaseId       String?           @unique
+  questionAttempts QuestionAttempt[]
+}
+
 enum AttemptStatus {
   COMPLETED
   PENDING
-}
-
-model users {
-  id         String   @id(map: "User_pkey")
-  username   String   @unique(map: "User_username_key")
-  email      String   @unique(map: "User_email_key")
-  password   String?
-  createdAt  DateTime @default(now())
-  isAdmin    Boolean  @default(false)
-  supabaseId String?  @unique
-
-  //relation
-  questionAttempts QuestionAttempt[]
 }
 
 enum Difficulty {
