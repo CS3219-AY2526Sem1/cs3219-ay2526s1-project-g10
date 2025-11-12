@@ -53,3 +53,6 @@ PeerPrep is a web-based platform that allows users to solve coding problems with
 
 ---
 
+## Screenshots
+
+---
