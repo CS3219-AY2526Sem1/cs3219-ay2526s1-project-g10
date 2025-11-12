@@ -240,7 +240,7 @@ jobs:
             --region="${{ env.REGION }}" \
             --service-account="$RUNTIME_SERVICE_ACCOUNT" \
             --allow-unauthenticated \
-            --set-secrets=NEXT_PUBLIC_SUPABASE_URL=SUPABASE_URL:latest,NEXT_PUBLIC_SUPABASE_ANON_KEY=SUPABASE_ANON_KEY:latest \
+            --set-secrets=NEXT_PUBLIC_SUPABASE_URL=NEXT_PUBLIC_SUPABASE_URL:latest,NEXT_PUBLIC_SUPABASE_ANON_KEY=NEXT_PUBLIC_SUPABASE_ANON_KEY:latest \
             --set-env-vars=NEXT_PUBLIC_API_GATEWAY_URL=$API_GATEWAY_URL,NEXT_PUBLIC_USE_MOCK=$NEXT_PUBLIC_USE_MOCK \
             $EXTRA_FLAGS
 
