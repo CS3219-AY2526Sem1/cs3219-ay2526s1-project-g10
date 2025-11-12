@@ -19,22 +19,13 @@ const readRuntimeEnv = (key: string): string | undefined => {
 
 const gatewayBaseRaw = readRuntimeEnv("NEXT_PUBLIC_API_GATEWAY_URL");
 const gatewayBase = gatewayBaseRaw ? stripTrailingSlash(gatewayBaseRaw) : undefined;
-const fallbackGateway = (() => {
-  if (gatewayBase) return gatewayBase;
-  if (typeof window !== "undefined") {
-    const fromEnv = window.__ENV?.NEXT_PUBLIC_API_GATEWAY_URL;
-    if (fromEnv) return stripTrailingSlash(fromEnv);
-    if (window.location?.origin) return stripTrailingSlash(window.location.origin);
-  }
-  return undefined;
-})();
 
 // Default to the Cloud Run gateway when explicit service URLs are absent.
 const userBase: string = readRuntimeEnv("NEXT_PUBLIC_USER_API")
-  ?? (fallbackGateway ? `${fallbackGateway}/users` : "http://localhost:3001");
+  ?? (gatewayBase ? `${gatewayBase}/users` : "http://localhost:3001");
 
 const matchBase: string = readRuntimeEnv("NEXT_PUBLIC_MATCH_API")
-  ?? (fallbackGateway ? `${fallbackGateway}/match` : "http://localhost:3002");
+  ?? (gatewayBase ? `${gatewayBase}/match` : "http://localhost:3002");
 
 export const userClient = axios.create({
   baseURL: stripTrailingSlash(userBase),
