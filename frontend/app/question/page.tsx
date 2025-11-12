@@ -31,53 +31,53 @@ export default function QuestionsPage() {
   const getDifficultyColor = (difficulty: string) => {
     switch (difficulty) {
       case "Easy":
-        return "bg-green-100 text-green-800"
+        return "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200"
       case "Medium":
-        return "bg-yellow-100 text-yellow-800"
+        return "bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200"
       case "Hard":
-        return "bg-red-100 text-red-800"
+        return "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200"
       default:
-        return "bg-gray-100 text-gray-800"
+        return "bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-200"
     }
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 transition-colors">
       <AppHeader />
 
       {/* Main Content */}
       <div className="mx-auto max-w-7xl px-6 py-8">
         <div className="mb-6 flex items-center justify-between">
-          <h1 className="text-3xl font-bold text-gray-900">Questions</h1>
+          <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100">Questions</h1>
         </div>
 
         {loading ? (
-          <div className="rounded-2xl bg-white p-12 text-center shadow-sm">
-            <p className="text-gray-600">Loading questions...</p>
+          <div className="rounded-2xl bg-white dark:bg-gray-800 p-12 text-center shadow-sm transition-colors">
+            <p className="text-gray-600 dark:text-gray-300">Loading questions...</p>
           </div>
         ) : questions.length === 0 ? (
-          <div className="rounded-2xl bg-white p-12 text-center shadow-sm">
-            <p className="text-gray-600">No questions found</p>
+          <div className="rounded-2xl bg-white dark:bg-gray-800 p-12 text-center shadow-sm transition-colors">
+            <p className="text-gray-600 dark:text-gray-300">No questions found</p>
           </div>
         ) : (
           <>
             <div className="space-y-4">
               {questions.map((question) => (
-                <div key={question.id} className="rounded-2xl bg-white p-6 shadow-sm hover:shadow-md transition-shadow">
+                <div key={question.id} className="rounded-2xl bg-white dark:bg-gray-800 p-6 shadow-sm hover:shadow-md transition-all">
                   <div className="flex items-start justify-between">
                     <div className="flex-1">
                       <div className="flex items-center gap-3 mb-2">
-                        <h3 className="text-xl font-semibold text-gray-900">{question.title}</h3>
+                        <h3 className="text-xl font-semibold text-gray-900 dark:text-gray-100">{question.title}</h3>
                         <span
                           className={`inline-flex px-3 py-1 rounded-full text-xs font-medium ${getDifficultyColor(question.difficulty)}`}
                         >
                           {question.difficulty}
                         </span>
                       </div>
-                      <p className="text-sm text-gray-600 mb-3">{question.description}</p>
+                      <p className="text-sm text-gray-600 dark:text-gray-300 mb-3">{question.description}</p>
                       <div className="flex flex-wrap gap-2">
                         {question.topics.map((topic: string, idx: number) => (
-                          <span key={idx} className="inline-flex px-3 py-1 rounded-full text-xs bg-blue-50 text-blue-700">
+                          <span key={idx} className="inline-flex px-3 py-1 rounded-full text-xs bg-blue-50 text-blue-700 dark:bg-blue-900 dark:text-blue-200">
                             {topic}{question.language ? ` • ${question.language}` : ""}
                           </span>
                         ))}
@@ -91,17 +91,17 @@ export default function QuestionsPage() {
               <button
                 disabled={currentPage === 1}
                 onClick={() => setCurrentPage((p) => p - 1)}
-                className="px-4 py-2 rounded-full bg-blue-200 hover:bg-blue-300 disabled:opacity-50"
+                className="px-4 py-2 rounded-full bg-blue-200 dark:bg-gray-700 hover:bg-blue-300 dark:hover:bg-gray-600 disabled:opacity-50 text-gray-900 dark:text-gray-100 transition-colors"
               >
                 Previous
               </button>
-              <span className="text-gray-700 font-medium">
+              <span className="text-gray-700 dark:text-gray-200 font-medium">
                 Page {currentPage} of {totalPages}
               </span>
               <button
                 disabled={currentPage === totalPages}
                 onClick={() => setCurrentPage((p) => p + 1)}
-                className="px-4 py-2 rounded-full bg-blue-200 hover:bg-blue-300 disabled:opacity-50"
+                className="px-4 py-2 rounded-full bg-blue-200 dark:bg-gray-700 hover:bg-blue-300 dark:hover:bg-gray-600 disabled:opacity-50 text-gray-900 dark:text-gray-100 transition-colors"
               >
                 Next
               </button>
