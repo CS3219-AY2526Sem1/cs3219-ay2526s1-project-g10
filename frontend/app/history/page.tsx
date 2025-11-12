@@ -132,13 +132,13 @@ export default function AttemptHistoryPage() {
           <table className="w-full">
             <thead className="bg-gray-50 dark:bg-gray-700 border-b border-gray-200 dark:border-gray-600">
               <tr>
-                <th className="px-6 py-4 text-left text-sm font-semibold text-gray-900">Question</th>
-                <th className="px-6 py-4 text-left text-sm font-semibold text-gray-900">Difficulty</th>
-                <th className="px-6 py-4 text-left text-sm font-semibold text-gray-900">Status</th>
-                <th className="px-6 py-4 text-left text-sm font-semibold text-gray-900">Date</th>
+                <th className="px-6 py-4 text-left text-sm font-semibold text-gray-900 dark:text-white">Question</th>
+                <th className="px-6 py-4 text-left text-sm font-semibold text-gray-900 dark:text-white">Difficulty</th>
+                <th className="px-6 py-4 text-left text-sm font-semibold text-gray-900 dark:text-white">Status</th>
+                <th className="px-6 py-4 text-left text-sm font-semibold text-gray-900 dark:text-white">Date</th>
                 {/*<th className="px-6 py-4 text-left text-sm font-semibold text-gray-900">Duration</th>*/}
                 {/*<th className="px-6 py-4 text-left text-sm font-semibold text-gray-900">Score</th>*/}
-                <th className="px-6 py-4 text-right text-sm font-semibold text-gray-900">Actions</th>
+                <th className="px-6 py-4 text-right text-sm font-semibold text-gray-900 dark:text-white">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
@@ -172,14 +172,14 @@ export default function AttemptHistoryPage() {
                         {attempt.status}
                       </span>
                     </td>
-                    <td className="px-6 py-4 text-sm text-gray-600">{formatDate(attempt.attemptedAt)}</td>
+                    <td className="px-6 py-4 text-sm text-gray-600 dark:text-gray-100">{formatDate(attempt.attemptedAt)}</td>
                     {/*<td className="px-6 py-4 text-sm text-gray-600">{attempt.duration}</td>*/}
                     {/*<td className="px-6 py-4 text-sm text-gray-600">{attempt.score}%</td>*/}
                     <td className="px-6 py-4 text-right">
-                      <button className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+                      <button className="p-2 hover:bg-gray-100 rounded-lg transition-colors dark:hover:bg-gray-400"
                               onClick={() => openAttemptDialog(attempt)}
                       >
-                        <Eye className="w-4 h-4 text-gray-600" />
+                        <Eye className="w-4 h-4 text-gray-600 dark:text-gray-100" />
                       </button>
                     </td>
                   </tr>
