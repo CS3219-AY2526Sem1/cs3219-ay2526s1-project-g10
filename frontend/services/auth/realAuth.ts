@@ -32,6 +32,11 @@ function mapUser(payload: any): User {
 }
 
 export async function login(email: string, password: string): Promise<AuthResponse> {
+  const resolvedBase = (userClient.defaults.baseURL ?? "").replace(/\/$/, "")
+  const loginEndpoint = `${resolvedBase || "[relative]"}/auth/login`
+  // Surface the resolved auth endpoint so we can verify deployments without inspecting bundles.
+  console.info(`[auth] POST ${loginEndpoint}`);
+
   const response = await userClient.post("/auth/login", { email, password })
   const payload = (response.data as {
     message?: string

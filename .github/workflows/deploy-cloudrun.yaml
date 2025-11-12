@@ -241,7 +241,7 @@ jobs:
             --service-account="$RUNTIME_SERVICE_ACCOUNT" \
             --allow-unauthenticated \
             --set-secrets=NEXT_PUBLIC_SUPABASE_URL=NEXT_PUBLIC_SUPABASE_URL:latest,NEXT_PUBLIC_SUPABASE_ANON_KEY=NEXT_PUBLIC_SUPABASE_ANON_KEY:latest \
-            --set-env-vars=NEXT_PUBLIC_API_GATEWAY_URL=$API_GATEWAY_URL,NEXT_PUBLIC_USE_MOCK=$NEXT_PUBLIC_USE_MOCK \
+            --set-env-vars=NEXT_PUBLIC_API_GATEWAY_URL=$API_GATEWAY_URL,NEXT_PUBLIC_USER_API=$API_GATEWAY_URL/users,NEXT_PUBLIC_MATCH_API=$API_GATEWAY_URL/match,NEXT_PUBLIC_USE_MOCK=$NEXT_PUBLIC_USE_MOCK \
             $EXTRA_FLAGS
 
           FRONTEND_URL=$(gcloud run services describe frontend --region="${{ env.REGION }}" --format='value(status.url)')
