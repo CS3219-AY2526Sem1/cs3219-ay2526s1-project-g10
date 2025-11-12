@@ -207,6 +207,7 @@ It allows users to ask contextual questions about coding problems while working 
 {
   "reply": "You can use a Set to track duplicates in each row, column, and 3x3 sub-grid. Try iterating through the board and check if the number already exists before adding it."
 }
+```
 
 
 ### API-Gateway
