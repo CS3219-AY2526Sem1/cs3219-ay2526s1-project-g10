@@ -70,6 +70,8 @@ Users can create or join custom rooms to collaborate with friends.
 
 ## Architecture Diagrams
 
+![Architecture Diagram](./images/ArchitectureDiagram.png)
+
 ---
 
 ## Screenshots
