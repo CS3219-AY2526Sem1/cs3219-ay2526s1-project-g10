@@ -1,0 +1,251 @@
+name: Deploy to Cloud Run
+
+on:
+  push:
+    branches:
+      - main
+      - deployment
+  workflow_dispatch:
+
+env:
+  PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
+  REGION: ${{ secrets.GCP_REGION }}
+  ARTIFACT_REPOSITORY: ${{ vars.ARTIFACT_REPOSITORY }}
+  IMAGE_TAG: ${{ github.sha }}
+
+jobs:
+  deploy:
+    name: Build and Deploy Services
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+    environment: production
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Authenticate to Google Cloud (WIF)
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ secrets.GCP_WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: ${{ secrets.GCP_SERVICE_ACCOUNT_EMAIL }}
+
+      - name: Set up gcloud SDK
+        uses: google-github-actions/setup-gcloud@v2
+        with:
+          project_id: ${{ env.PROJECT_ID }}
+
+      - name: Configure Docker for Artifact Registry
+        run: gcloud auth configure-docker "${{ env.REGION }}-docker.pkg.dev" --quiet
+
+      - name: Compute deployment settings
+        run: |
+          set -euo pipefail
+          IMAGE_ROOT="${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.ARTIFACT_REPOSITORY }}"
+          echo "IMAGE_ROOT=$IMAGE_ROOT" >> "$GITHUB_ENV"
+
+          RUNTIME_SA='${{ vars.CLOUD_RUN_SERVICE_ACCOUNT }}'
+          if [ -z "$RUNTIME_SA" ]; then
+            RUNTIME_SA='${{ secrets.GCP_SERVICE_ACCOUNT_EMAIL }}'
+          fi
+          echo "RUNTIME_SERVICE_ACCOUNT=$RUNTIME_SA" >> "$GITHUB_ENV"
+
+          VPC_CONNECTOR='${{ vars.CLOUD_RUN_VPC_CONNECTOR }}'
+          echo "VPC_CONNECTOR=$VPC_CONNECTOR" >> "$GITHUB_ENV"
+
+          RESET_REDIS='${{ vars.RESET_REDIS_ON_BOOT }}'
+          if [ -z "$RESET_REDIS" ]; then
+            RESET_REDIS='false'
+          fi
+          echo "RESET_REDIS_ON_BOOT=$RESET_REDIS" >> "$GITHUB_ENV"
+
+          PASSWORD_RESET='${{ vars.PASSWORD_RESET_REDIRECT }}'
+          echo "PASSWORD_RESET_REDIRECT=$PASSWORD_RESET" >> "$GITHUB_ENV"
+
+          NEXT_USE_MOCK='${{ vars.NEXT_PUBLIC_USE_MOCK }}'
+          if [ -z "$NEXT_USE_MOCK" ]; then
+            NEXT_USE_MOCK='false'
+          fi
+          echo "NEXT_PUBLIC_USE_MOCK=$NEXT_USE_MOCK" >> "$GITHUB_ENV"
+
+          REDIS_HOST='${{ secrets.MATCHING_REDIS_HOST }}'
+          REDIS_PORT='${{ secrets.MATCHING_REDIS_PORT }}'
+          if [ -z "$REDIS_HOST" ] || [ -z "$REDIS_PORT" ]; then
+            echo "::warning::MATCHING_REDIS_HOST or MATCHING_REDIS_PORT secret missing; matching-service deployment may fail."
+          fi
+          echo "REDIS_HOST=$REDIS_HOST" >> "$GITHUB_ENV"
+          echo "REDIS_PORT=$REDIS_PORT" >> "$GITHUB_ENV"
+
+          YW_HOST='${{ vars.YW_HOST }}'
+          if [ -z "$YW_HOST" ]; then
+            YW_HOST='127.0.0.1'
+          fi
+          echo "YW_HOST=$YW_HOST" >> "$GITHUB_ENV"
+
+          YW_PORT='${{ vars.YW_PORT }}'
+          if [ -z "$YW_PORT" ]; then
+            YW_PORT='1234'
+          fi
+          echo "YW_PORT=$YW_PORT" >> "$GITHUB_ENV"
+
+      - name: Build and push container images
+        run: |
+          set -euxo pipefail
+          docker build -t "$IMAGE_ROOT/user-service:${IMAGE_TAG}" ./user-service
+          docker push "$IMAGE_ROOT/user-service:${IMAGE_TAG}"
+
+          docker build -t "$IMAGE_ROOT/question-service:${IMAGE_TAG}" ./question-service
+          docker push "$IMAGE_ROOT/question-service:${IMAGE_TAG}"
+
+          docker build -t "$IMAGE_ROOT/matching-service:${IMAGE_TAG}" ./matching-service
+          docker push "$IMAGE_ROOT/matching-service:${IMAGE_TAG}"
+
+          docker build -t "$IMAGE_ROOT/collab-service:${IMAGE_TAG}" ./collab-service
+          docker push "$IMAGE_ROOT/collab-service:${IMAGE_TAG}"
+
+          docker build -t "$IMAGE_ROOT/api-gateway:${IMAGE_TAG}" ./api-gateway
+          docker push "$IMAGE_ROOT/api-gateway:${IMAGE_TAG}"
+
+          docker build -t "$IMAGE_ROOT/frontend:${IMAGE_TAG}" ./frontend
+          docker push "$IMAGE_ROOT/frontend:${IMAGE_TAG}"
+
+      - name: Deploy user-service
+        run: |
+          set -euxo pipefail
+          EXTRA_FLAGS=""
+          if [ -n "$VPC_CONNECTOR" ]; then
+            EXTRA_FLAGS="--vpc-connector=$VPC_CONNECTOR --vpc-egress=all-traffic"
+          fi
+          SECRET_FLAGS="--set-secrets=SUPABASE_URL=SUPABASE_URL:latest,SUPABASE_SERVICE_ROLE_KEY=SUPABASE_SERVICE_ROLE_KEY:latest,ADMIN_REGISTRATION_CODE=ADMIN_REGISTRATION_CODE:latest"
+          ENV_FLAGS=""
+          if [ -n "$PASSWORD_RESET_REDIRECT" ]; then
+            ENV_FLAGS="--set-env-vars=PASSWORD_RESET_REDIRECT=$PASSWORD_RESET_REDIRECT"
+          fi
+          gcloud run deploy user-service \
+            --image="$IMAGE_ROOT/user-service:${IMAGE_TAG}" \
+            --region="${{ env.REGION }}" \
+            --service-account="$RUNTIME_SERVICE_ACCOUNT" \
+            --allow-unauthenticated \
+            $EXTRA_FLAGS $SECRET_FLAGS $ENV_FLAGS
+
+          USER_URL=$(gcloud run services describe user-service --region="${{ env.REGION }}" --format='value(status.url)')
+          echo "USER_SERVICE_URL=$USER_URL" >> "$GITHUB_ENV"
+
+      - name: Deploy question-service
+        run: |
+          set -euxo pipefail
+          if [ -z "${USER_SERVICE_URL:-}" ]; then
+            echo "::error::USER_SERVICE_URL missing; user-service deployment likely failed." >&2
+            exit 1
+          fi
+          EXTRA_FLAGS=""
+          if [ -n "$VPC_CONNECTOR" ]; then
+            EXTRA_FLAGS="--vpc-connector=$VPC_CONNECTOR --vpc-egress=all-traffic"
+          fi
+          gcloud run deploy question-service \
+            --image="$IMAGE_ROOT/question-service:${IMAGE_TAG}" \
+            --region="${{ env.REGION }}" \
+            --service-account="$RUNTIME_SERVICE_ACCOUNT" \
+            --allow-unauthenticated \
+            --set-env-vars=USER_SERVICE_URL=$USER_SERVICE_URL \
+            --set-secrets=DATABASE_URL=DATABASE_URL:latest \
+            $EXTRA_FLAGS
+
+          QUESTION_URL=$(gcloud run services describe question-service --region="${{ env.REGION }}" --format='value(status.url)')
+          echo "QUESTION_SERVICE_URL=$QUESTION_URL" >> "$GITHUB_ENV"
+
+      - name: Deploy matching-service
+        run: |
+          set -euxo pipefail
+          if [ -z "${QUESTION_SERVICE_URL:-}" ]; then
+            echo "::error::QUESTION_SERVICE_URL missing; question-service deployment likely failed." >&2
+            exit 1
+          fi
+          EXTRA_FLAGS=""
+          if [ -n "$VPC_CONNECTOR" ]; then
+            EXTRA_FLAGS="--vpc-connector=$VPC_CONNECTOR --vpc-egress=all-traffic"
+          fi
+          ENV_FLAGS="--set-env-vars=QUESTION_SERVICE_URL=$QUESTION_SERVICE_URL"
+          if [ -n "$REDIS_HOST" ] && [ -n "$REDIS_PORT" ]; then
+            ENV_FLAGS="$ENV_FLAGS,REDIS_HOST=$REDIS_HOST,REDIS_PORT=$REDIS_PORT"
+          fi
+          ENV_FLAGS="$ENV_FLAGS,RESET_REDIS_ON_BOOT=$RESET_REDIS_ON_BOOT"
+          gcloud run deploy matching-service \
+            --image="$IMAGE_ROOT/matching-service:${IMAGE_TAG}" \
+            --region="${{ env.REGION }}" \
+            --service-account="$RUNTIME_SERVICE_ACCOUNT" \
+            --allow-unauthenticated \
+            --set-secrets=SUPABASE_URL=SUPABASE_URL:latest,SUPABASE_SERVICE_ROLE_KEY=SUPABASE_SERVICE_ROLE_KEY:latest \
+            $ENV_FLAGS \
+            $EXTRA_FLAGS
+
+          MATCHING_URL=$(gcloud run services describe matching-service --region="${{ env.REGION }}" --format='value(status.url)')
+          echo "MATCHING_SERVICE_URL=$MATCHING_URL" >> "$GITHUB_ENV"
+
+      - name: Deploy collab-service
+        run: |
+          set -euxo pipefail
+          EXTRA_FLAGS=""
+          if [ -n "$VPC_CONNECTOR" ]; then
+            EXTRA_FLAGS="--vpc-connector=$VPC_CONNECTOR --vpc-egress=all-traffic"
+          fi
+          gcloud run deploy collab-service \
+            --image="$IMAGE_ROOT/collab-service:${IMAGE_TAG}" \
+            --region="${{ env.REGION }}" \
+            --service-account="$RUNTIME_SERVICE_ACCOUNT" \
+            --allow-unauthenticated \
+            --set-secrets=GEMINI_API_KEY=GEMINI_API_KEY:latest \
+            --set-env-vars=YW_HOST=$YW_HOST,YW_PORT=$YW_PORT \
+            $EXTRA_FLAGS
+
+          COLLAB_URL=$(gcloud run services describe collab-service --region="${{ env.REGION }}" --format='value(status.url)')
+          echo "COLLAB_SERVICE_URL=$COLLAB_URL" >> "$GITHUB_ENV"
+
+      - name: Deploy API Gateway
+        run: |
+          set -euxo pipefail
+          for required in USER_SERVICE_URL MATCHING_SERVICE_URL QUESTION_SERVICE_URL COLLAB_SERVICE_URL; do
+            if [ -z "${!required:-}" ]; then
+              echo "::error::${required} is not set; ensure previous deployments succeeded." >&2
+              exit 1
+            fi
+          done
+          EXTRA_FLAGS=""
+          if [ -n "$VPC_CONNECTOR" ]; then
+            EXTRA_FLAGS="--vpc-connector=$VPC_CONNECTOR --vpc-egress=all-traffic"
+          fi
+          gcloud run deploy api-gateway \
+            --image="$IMAGE_ROOT/api-gateway:${IMAGE_TAG}" \
+            --region="${{ env.REGION }}" \
+            --service-account="$RUNTIME_SERVICE_ACCOUNT" \
+            --allow-unauthenticated \
+            --set-secrets=JWT_SECRET=JWT_SECRET:latest \
+            --set-env-vars=USER_SERVICE_URL=$USER_SERVICE_URL,MATCHING_SERVICE_URL=$MATCHING_SERVICE_URL,QUESTION_SERVICE_URL=$QUESTION_SERVICE_URL,COLLAB_SERVICE_URL=$COLLAB_SERVICE_URL \
+            $EXTRA_FLAGS
+
+          API_GATEWAY_URL=$(gcloud run services describe api-gateway --region="${{ env.REGION }}" --format='value(status.url)')
+          echo "API_GATEWAY_URL=$API_GATEWAY_URL" >> "$GITHUB_ENV"
+
+      - name: Deploy frontend
+        run: |
+          set -euxo pipefail
+          if [ -z "${API_GATEWAY_URL:-}" ]; then
+            echo "::error::API_GATEWAY_URL not set; ensure gateway deployment succeeded." >&2
+            exit 1
+          fi
+          EXTRA_FLAGS=""
+          if [ -n "$VPC_CONNECTOR" ]; then
+            EXTRA_FLAGS="--vpc-connector=$VPC_CONNECTOR --vpc-egress=all-traffic"
+          fi
+          gcloud run deploy frontend \
+            --image="$IMAGE_ROOT/frontend:${IMAGE_TAG}" \
+            --region="${{ env.REGION }}" \
+            --service-account="$RUNTIME_SERVICE_ACCOUNT" \
+            --allow-unauthenticated \
+            --set-secrets=NEXT_PUBLIC_SUPABASE_URL=SUPABASE_URL:latest,NEXT_PUBLIC_SUPABASE_ANON_KEY=SUPABASE_ANON_KEY:latest \
+            --set-env-vars=NEXT_PUBLIC_API_GATEWAY_URL=$API_GATEWAY_URL,NEXT_PUBLIC_USE_MOCK=$NEXT_PUBLIC_USE_MOCK \
+            $EXTRA_FLAGS
+
+          FRONTEND_URL=$(gcloud run services describe frontend --region="${{ env.REGION }}" --format='value(status.url)')
+          echo "Frontend deployed to $FRONTEND_URL"
