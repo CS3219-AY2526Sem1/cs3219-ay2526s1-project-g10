@@ -42,7 +42,6 @@ export async function createPendingAttempt(attemptData: {
   const payload = {
     userId: attemptData.userId,
     questionId: attemptData.questionId,
-    actions: {},
     attemptedAt: new Date().toISOString(),
     questionJson: safeQuestion
   }

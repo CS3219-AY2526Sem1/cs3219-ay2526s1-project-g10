@@ -6,14 +6,13 @@ const prisma = new PrismaClient();
 
 // POST /history - Records a new question attempt
 router.post("/", async (req, res) => {
-    const { userId, questionId, solution, actions, attemptedAt, questionJson } = req.body;
+    const { userId, questionId, attemptedAt, questionJson } = req.body;
     try {
         console.log("Recording question attempt:", req.body);
         const newAttempt = await prisma.questionAttempt.create({
             data: {
                 userId,
                 questionId: questionId? parseInt(questionId) : null,
-                actions,
                 attemptedAt,
                 status: "PENDING", // Default status
                 code: "", // Default code
