@@ -5,7 +5,16 @@ import http from "http";
 import aiRoutes from "./routes/ai-routes.js";
 
 const app = express();
-app.use(cors({ origin: ["http://localhost:3000"], credentials: true }));
+const allowOrigins = process.env.COLLAB_ALLOWED_ORIGINS
+  ? process.env.COLLAB_ALLOWED_ORIGINS.split(",").map((origin) => origin.trim()).filter(Boolean)
+  : ["http://localhost:3000"];
+
+app.use(
+  cors({
+    origin: allowOrigins,
+    credentials: true,
+  })
+);
 app.use(express.json()); 
 app.get("/healthz", (_req, res) => res.json({ ok: true }));
 app.use("/ai", aiRoutes);
@@ -39,12 +48,12 @@ server.on("upgrade", (req, socket, head) => {
   }
 });
 
-const PORT = Number(process.env.PORT || 3004);
+const PORT = Number(process.env.PORT || 8080);
 
-server.listen(PORT, () => {
-  console.log(`Collab API (HTTP) on http://localhost:${PORT}`);
-  console.log(`Gemini AI route ready at http://localhost:${PORT}/ai`);
-  console.log(`Proxying WS at ws://localhost:${PORT}/collab  ->  ${YW_TARGET}`);
+server.listen(PORT, "0.0.0.0", () => {
+  console.log(`Collab API (HTTP) on http://0.0.0.0:${PORT}`);
+  console.log(`Gemini AI route ready at http://0.0.0.0:${PORT}/ai`);
+  console.log(`Proxying WS at ws://0.0.0.0:${PORT}/collab  ->  ${YW_TARGET}`);
 });
 
 app.get("/healthz", (_req, res) => res.json({ ok: true }));
