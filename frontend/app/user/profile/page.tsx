@@ -2,14 +2,24 @@
 
 import { useState, useEffect } from "react"
 import { Search, Menu, User, Folder, Clock, Edit2, LogOut, Check, X } from "lucide-react"
-import { getUserProfile, type UserProfile } from "../../../services/user"
+import { getUserProfile } from "../../../services/user"
 import { useAuth } from "../../../contexts/auth-context"
 import { useRouter } from "next/navigation"
 import { createClient } from "@supabase/supabase-js"
 import { AppHeader } from "../../../components/navigation/AppHeader"
 
+export const dynamic = "force-dynamic"
+
+type ProfileDetails = {
+  id: string
+  username: string
+  email: string
+  isAdmin: boolean
+  createdAt: string
+}
+
 export default function ProfilePage() {
-  const [profile, setProfile] = useState<UserProfile | null>(null)
+  const [profile, setProfile] = useState<ProfileDetails | null>(null)
   const [loading, setLoading] = useState(true)
   const [editingField, setEditingField] = useState<"username" | "email" | null>(null)
   const [username, setUsername] = useState("")
@@ -29,7 +39,7 @@ export default function ProfilePage() {
           console.log("3. User email from auth context:", user.email)
 
       try {
-        const data = await getUserProfile(user.id)
+  const data = await getUserProfile(user.id) as ProfileDetails
         console.log("5. getUserProfile returned:", data)
         console.log("6. data.email:", data.email)
         setProfile(data)
@@ -57,10 +67,14 @@ export default function ProfilePage() {
     setMessage(null)
 
     try {
-      const supabase = createClient(
-        process.env.NEXT_PUBLIC_SUPABASE_URL!,
-        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-      )
+      const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+      const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+
+      if (!supabaseUrl || !supabaseAnonKey) {
+        throw new Error("Supabase environment variables are not configured")
+      }
+
+      const supabase = createClient(supabaseUrl, supabaseAnonKey)
 
       const { error } = await supabase
         .from("users")
@@ -147,10 +161,14 @@ export default function ProfilePage() {
     setMessage(null)
 
     try {
-      const supabase = createClient(
-        process.env.NEXT_PUBLIC_SUPABASE_URL!,
-        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-      )
+      const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+      const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+
+      if (!supabaseUrl || !supabaseAnonKey) {
+        throw new Error("Supabase environment variables are not configured")
+      }
+
+      const supabase = createClient(supabaseUrl, supabaseAnonKey)
 
       const { error: authError } = await supabase.auth.updateUser(
         { email: email.trim() },

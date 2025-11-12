@@ -8,12 +8,19 @@ export interface UserProfile {
   createdAt: string
 }
 
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-)
+function getSupabaseClient() {
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+  const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+
+  if (!supabaseUrl || !supabaseAnonKey) {
+    throw new Error("Supabase environment variables are not configured")
+  }
+
+  return createClient(supabaseUrl, supabaseAnonKey)
+}
 
 export async function getUserProfile(userId: string): Promise<UserProfile> {
+  const supabase = getSupabaseClient()
   const { data, error } = await supabase
     .from("users")
     .select("*")
@@ -38,6 +45,7 @@ export async function updateUserProfile(
   userId: string,
   updates: Partial<Omit<UserProfile, 'id' | 'createdAt'>>
 ): Promise<UserProfile> {
+  const supabase = getSupabaseClient()
   const { data, error } = await supabase
     .from("users")
     .update(updates)
