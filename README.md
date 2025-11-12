@@ -104,6 +104,24 @@ The Collaboration Service retrieves this sessionId to connect both users into a 
 ### Question Attempt History
 
 ### Custom Matching Rooms
+Users can create or join custom rooms to collaborate with friends.
+
+**Custom Room Creation:**
+1. User navigates to the matching page.
+2. User clicks `Create/Join Custom Room` button.
+3. User clicks `Create Room` button.
+4. User selects difficulty and topic of choice, then sets a room password.
+5. User clicks `Create Room` button.
+6. Room code is displayed to the user.
+7. User is redirected to the custom room collaboration page.
+
+**Joining a Custom Room:**
+1. User navigates to the matching page.
+2. User clicks `Create/Join Custom Room` button.
+3. User clicks `Join Room` button.
+4. User enters room code and password.
+5. User clicks `Join Room` button.
+6. User is redirected to the custom room collaboration page.
 
 ### AI Assisted Problem-Solving and Chatbot
 
@@ -143,6 +161,7 @@ The API Gateway is a self-hosted Express.js gateway that consolidates all servic
 
 - **Node.js** (JavaScript runtime) – to run backend code
 - **Express.js** – to define routes, handle middleware, and create REST APIs
+- **React + Next.js** – frontend
 
 ### Database Layer
 
@@ -158,8 +177,14 @@ The API Gateway is a self-hosted Express.js gateway that consolidates all servic
 
 ## Architecture Diagrams
 
+![Architecture Diagram](./images/ArchitectureDiagram.png)
+
 ---
 
 ## Screenshots
+
+![Matching Page](./images/MatchingPage.png)
+![Question Page](./images/QuestionPage.png)
+![Dark Mode](./images/DarkMode.png)
 
 ---
