@@ -32,12 +32,9 @@ model QuestionAttempt {
   questionId  Int?
   questionJson Json?
   attemptedAt DateTime @default(now())
-  duration    Int?      // null if not completed
   status      AttemptStatus
   code        String? // null if not attempted
   output      String?
-  solution    String?
-  actions     Json?
 
   //relation
   user      users     @relation(fields: [userId], references: [id], onDelete: Cascade)

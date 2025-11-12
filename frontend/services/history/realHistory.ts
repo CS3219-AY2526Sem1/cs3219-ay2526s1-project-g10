@@ -8,9 +8,7 @@ export interface Attempt {
   questionJson?: MatchQuestion
   difficulty: "Easy" | "Medium" | "Hard"
   status: "COMPLETED" | "PENDING"
-  score: number
   date: string
-  duration: string
 }
 
 const API_URL = process.env.NEXT_PUBLIC_QUESTION_SERVICE_URL
@@ -44,8 +42,6 @@ export async function createPendingAttempt(attemptData: {
   const payload = {
     userId: attemptData.userId,
     questionId: attemptData.questionId,
-    solution: "",
-    actions: {},
     attemptedAt: new Date().toISOString(),
     questionJson: safeQuestion
   }
@@ -69,7 +65,6 @@ export async function createPendingAttempt(attemptData: {
 // Update attempt code, duration
 export async function updateAttempt( attemptId: string, updateData: Partial<
 { code: string,
-  duration: string,
   output: string,
   status: "COMPLETED",
   questionId: string

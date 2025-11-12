@@ -8,9 +8,7 @@ export interface Attempt {
   questionTitle: string
   difficulty: "Easy" | "Medium" | "Hard"
   status: "Completed" | "In Progress" | "Failed"
-  score: number
   date: string
-  duration: string
 }
 
 export interface AdminAttempt extends Attempt {
