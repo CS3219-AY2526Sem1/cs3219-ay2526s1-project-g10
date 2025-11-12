@@ -55,6 +55,7 @@ Users can create or join custom rooms to collaborate with friends.
 ### Languages & Frameworks
 - **Node.js** (JavaScript runtime) – to run backend code
 - **Express.js** – to define routes, handle middleware, and create REST APIs
+- **React + Next.js** – frontend
 
 ### Database Layer
 
