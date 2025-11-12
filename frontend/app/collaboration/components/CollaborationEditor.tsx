@@ -20,6 +20,7 @@ import { CODE_VERSIONS } from "../../../lib/constants"
 
 import { ChevronDownIcon, Play, Loader2, MessageCircle, X, Send, LogOut } from "lucide-react"
 import { Button } from "../../../components/ui/button"
+import {updateAttempt} from "../../../services/history/realHistory";
 
 type Participant = {
   name: string
@@ -28,6 +29,7 @@ type Participant = {
 
 interface CollaborationEditorProps {
   roomId: string | null
+  attemptId?: string
   participants: Participant[]
   onRequestLeave: () => void
   leaving: boolean
@@ -47,7 +49,7 @@ const API = axios.create({
 const DEFAULT_COLLAB_WS = "ws://localhost:3004/collab"
 
 
-export default function CollaborationEditor({ roomId, participants, onRequestLeave, leaving, onCodeChange }: CollaborationEditorProps) {
+export default function CollaborationEditor({ roomId, participants, onRequestLeave, leaving, attemptId, onCodeChange }: CollaborationEditorProps) {
   const [language, setLanguage] = useState<string>("python")
   const [codeRunning, setCodeRunning] = useState<boolean>(false);
   const [codeOutput, setCodeOutput] = useState<string | null>(null);
@@ -66,6 +68,13 @@ export default function CollaborationEditor({ roomId, participants, onRequestLea
   const [chatInput, setChatInput] = useState<string>("")
   const [chatMessages, setChatMessages] = useState<{ id: number; text: string; ts: number }[]>([])
   const chatEndRef = useRef<HTMLDivElement | null>(null)
+  const storedAttemptId = useRef<String | null>(null);
+
+  useEffect(() => {
+    if (!attemptId || storedAttemptId.current) return;
+    storedAttemptId.current = attemptId; // Store the attemptId to avoid re-running
+  }, [attemptId]);
+
 
   useEffect(() => {
     if (!roomId) return
@@ -99,7 +108,26 @@ export default function CollaborationEditor({ roomId, participants, onRequestLea
   useEffect(() => {
     if (!ydocRef.current) return
     yOutputRef.current = ydocRef.current.getText("output")
-    const updateOutput = () => setSharedOutput(yOutputRef.current!.toString())
+    const updateOutput = async () => {
+        const newOutput = yOutputRef.current!.toString()
+        setSharedOutput(newOutput)
+
+    // Update attempt whenever output changes
+    try {
+      if(storedAttemptId.current || attemptId) {
+        const attemptToUpdateId = storedAttemptId.current ? storedAttemptId.current.toString() : attemptId!;
+        await updateAttempt(attemptToUpdateId, {
+          code: editorRef.current ? editorRef.current.getValue() : "",
+          duration: "0",
+          output: newOutput,
+          status: "COMPLETED",
+        })
+      }
+    } catch (historyError) {
+      console.error("Failed to update attempt after code run", historyError)
+    }
+    }
+
     yOutputRef.current.observe(updateOutput)
 
     // Chat shared array

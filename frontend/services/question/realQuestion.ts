@@ -68,6 +68,31 @@ export async function getQuestions(page = 1, limit = 100): Promise<{
   }
 }
 
+export async function getQuestion(id: string): Promise<Question | null> {
+    try {
+        const token = localStorage.getItem("auth_token")
+
+        const response = await fetch(`${API_URL}/questions/${id}`, {
+            headers: {
+                ...(token && { Authorization: `Bearer ${token}` }),
+            },
+        })
+
+        if (!response.ok) {
+            if (response.status === 404) {
+                return null
+            }
+            throw new Error("Failed to fetch question")
+        }
+
+        const data = await response.json()
+        return transformQuestion(data)
+    }
+    catch (error) {
+        console.error("Error fetching question:", error)
+        throw error
+    }
+}
 // export async function getQuestions(filters?: {
 //   difficulty?: string
 //   search?: string
