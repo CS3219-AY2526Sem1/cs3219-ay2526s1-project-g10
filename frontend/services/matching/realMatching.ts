@@ -199,9 +199,10 @@ export async function getActiveSession(): Promise<MatchSession | null> {
         ?? error.response?.data?.message
         ?? error.message
         ?? "Failed to fetch active session"
-      throw new Error(message)
+      // throw new Error(message)
+      console.log("Error fetching active session:", message)
     }
-    throw error
+    return null
   }
 }
 

@@ -22,7 +22,7 @@
 
 5. In the `user-service` directory, create a copy of the `.env.sample` file and name it `.env`.
 
-6. Update the `DB_CLOUD_URI` of the `.env` file, and paste the string we copied earlier in step 4. Also remember to replace the `<password>` placeholder with the actual password.
+6. Update the `DB_CLOUD_URI` of the `.env` file, and paste the string we copied earlier in step 4. Also remember to replace the `<password>` placeholder with the actual password. Optionally, set `ADMIN_REGISTRATION_CODE` to a secret passphrase if you want to allow trusted users to self-register as admins. Leave it blank to disable admin self-registration.
 
 ## Running User Service
 
@@ -191,7 +191,7 @@
         - Admin users: Can update any user's privilege. The server verifies the user associated with the JWT token is an admin user and allows the privilege update.
         - Non-admin users: Not allowed access.
 
-> :bulb: You may need to manually assign admin status to the first user by directly editing the database document before using this endpoint.
+> :bulb: You can promote a user by sharing the `ADMIN_REGISTRATION_CODE` during signup or by using this endpoint as an authenticated admin.
 
 - Responses:
 

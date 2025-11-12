@@ -15,6 +15,7 @@ export function SignupForm() {
   const [name, setName] = useState("")
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
+  const [adminCode, setAdminCode] = useState("")
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState("")
   const router = useRouter()
@@ -26,7 +27,8 @@ export function SignupForm() {
     setError("")
 
     try {
-      const { user, token } = await signup(name, email, password)
+  const trimmedAdminCode = adminCode.trim()
+  const { user, token } = await signup(name, email, password, trimmedAdminCode || undefined)
 
       if (!user.emailConfirmedAt) {
         router.push(`/user/verify-email?email=${encodeURIComponent(email)}`)
@@ -39,7 +41,7 @@ export function SignupForm() {
         await refreshUser()
       }
 
-      router.replace("/matching")
+  router.replace("/matching")
     } catch (err) {
       if (isAxiosError(err)) {
         const message = (err.response?.data as { message?: string } | undefined)?.message ?? err.message
@@ -105,6 +107,21 @@ export function SignupForm() {
               minLength={8}
               className="dark:border-gray-600 dark:text-gray-100"
             />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="adminCode">Admin access code (optional)</Label>
+            <Input
+              id="adminCode"
+              type="text"
+              placeholder="Enter admin code if provided"
+              value={adminCode}
+              onChange={(e) => setAdminCode(e.target.value)}
+              disabled={isLoading}
+              className="dark:border-gray-600 dark:text-gray-100"
+            />
+            <p className="text-xs text-muted-foreground dark:text-gray-300">
+              Leave blank to create a regular account. Use the admin access code shared by the team to register as an admin.
+            </p>
           </div>
           <Button type="submit" className="w-full" disabled={isLoading}>
             {isLoading ? "Creating account..." : "Create account"}
