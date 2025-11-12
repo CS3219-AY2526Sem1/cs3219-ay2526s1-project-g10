@@ -1,6 +1,7 @@
 import express from "express";
 import cors from "cors";
 import questionRoutes from "./routes/question-routes.js";
+import questionAttemptRoutes from "./routes/question-attempt-routes.js";
 
 const app = express();
 
@@ -14,6 +15,10 @@ app.get("/healthz", (req, res) => {
 
 // Use question routes
 app.use("/questions", questionRoutes);
+
+// Use history routes
+app.use("/history", questionAttemptRoutes);
+
 
 app.use("/api", (req, res) => {
   res.json({ message: "Question service is running!" });

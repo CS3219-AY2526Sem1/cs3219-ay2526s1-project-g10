@@ -1,7 +1,7 @@
 generator client {
   provider      = "prisma-client-js"
+  output        = "../generated/prisma"
   binaryTargets = ["native", "linux-musl-openssl-3.0.x", "linux-musl-arm64-openssl-3.0.x"]
-  output       = "../generated/prisma"
 }
 
 datasource db {
@@ -22,15 +22,47 @@ model Question {
   topic             String
   followUp          String?
   createdAt         DateTime   @default(now())
+
+  //relation
+  attempts          QuestionAttempt[]
+}
+model QuestionAttempt {
+  id          Int      @id @default(autoincrement())
+  userId      String
+  questionId  Int?
+  questionJson Json?
+  attemptedAt DateTime @default(now())
+  duration    Int?      // null if not completed
+  status      AttemptStatus
+  code        String? // null if not attempted
+  output      String?
+  solution    String?
+  actions     Json?
+
+  //relation
+  user      users     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  question  Question?  @relation(fields: [questionId], references: [id], onDelete: Cascade)
+  @@index([userId])
+  @@index([questionId])
+  @@map("question_attempts")
 }
 
-model User {
-  id        String   @id
-  username  String   @unique
-  email     String   @unique
-  password  String
-  createdAt DateTime @default(now())
-  isAdmin   Boolean  @default(false)
+enum AttemptStatus {
+  COMPLETED
+  PENDING
+}
+
+model users {
+  id         String   @id(map: "User_pkey")
+  username   String   @unique(map: "User_username_key")
+  email      String   @unique(map: "User_email_key")
+  password   String?
+  createdAt  DateTime @default(now())
+  isAdmin    Boolean  @default(false)
+  supabaseId String?  @unique
+
+  //relation
+  questionAttempts QuestionAttempt[]
 }
 
 enum Difficulty {

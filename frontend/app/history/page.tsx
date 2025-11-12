@@ -5,9 +5,13 @@ import { Eye } from "lucide-react"
 import { getUserAttempts, type Attempt } from "../../services/history"
 import { useAuth } from "../../contexts/auth-context"
 import { AppHeader } from "../../components/navigation/AppHeader"
+import {getQuestion} from "../../services/question";
+import AttemptDetailsDialog from "./components/attemptDetailsDialog";
 
 export default function AttemptHistoryPage() {
   const [attempts, setAttempts] = useState<Attempt[]>([])
+  const [selectedAttempt, setSelectedAttempt] = useState<Attempt | null>(null)
+  const [selectedQuestion, setSelectedQuestion] = useState<any>(null)
   const [searchQuery, setSearchQuery] = useState("")
   const [loading, setLoading] = useState(true)
   const { user } = useAuth()
@@ -18,7 +22,21 @@ export default function AttemptHistoryPage() {
 
       try {
         const data = await getUserAttempts(user.id)
-        setAttempts(data)
+
+        //fetch question details for each attempt
+        const questionDetails = await Promise.all(
+          data.map(async (attempt) => {
+            const question = await getQuestion(attempt.questionId)
+            return {
+              ...attempt,
+              questionTitle: question ? question.title : "Unknown Question",
+                difficulty: question ? question.difficulty : "Easy",
+            }
+          }),
+        )
+        console.log("attempts", attempts)
+        setAttempts(questionDetails)
+
       } catch (error) {
         console.error("Error fetching attempts:", error)
       } finally {
@@ -45,8 +63,35 @@ export default function AttemptHistoryPage() {
     }
   }
 
+  // transforms ISO dateTime string to readable format
+  const formatDate = (isoString: string) => {
+    const date = new Date(isoString)
+
+    const day = date.getDate();
+    const month = date.toLocaleString('default', { month: 'short' }); // e.g., Jan, Feb
+    const year = date.getFullYear();
+    const hours = date.getHours();
+    const minutes = date.getMinutes();
+    const amPm = hours >= 12 ? 'PM' : 'AM';
+    const formattedHours = hours % 12 || 12; // Convert to 12-hour format
+
+    const formattedDate = `${day.toString().padStart(2, '0')}/${month
+      .toString()
+      .padStart(2, '0')}/${year} ${formattedHours
+      .toString()
+      .padStart(2, '0')}:${minutes.toString().padStart(2, '0')} ${amPm}`;
+
+    return formattedDate;
+  };
+
   const getStatusColor = (status: string) => {
-    return status === "Completed" ? "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300" : "bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-300"
+    return status === "COMPLETED" ? "bg-blue-100 text-blue-800" : "bg-orange-100 text-orange-800"
+  }
+
+  const openAttemptDialog = async (attempt: Attempt) => {
+    if (!attempt.questionJson) return;
+    setSelectedQuestion(attempt.questionJson);
+    setSelectedAttempt(attempt)
   }
 
   return (
@@ -62,13 +107,13 @@ export default function AttemptHistoryPage() {
           <table className="w-full">
             <thead className="bg-gray-50 dark:bg-gray-700 border-b border-gray-200 dark:border-gray-600">
               <tr>
-                <th className="px-6 py-4 text-left text-sm font-semibold text-gray-900 dark:text-gray-100">Question</th>
-                <th className="px-6 py-4 text-left text-sm font-semibold text-gray-900 dark:text-gray-100">Difficulty</th>
-                <th className="px-6 py-4 text-left text-sm font-semibold text-gray-900 dark:text-gray-100">Status</th>
-                <th className="px-6 py-4 text-left text-sm font-semibold text-gray-900 dark:text-gray-100">Date</th>
-                <th className="px-6 py-4 text-left text-sm font-semibold text-gray-900 dark:text-gray-100">Duration</th>
-                <th className="px-6 py-4 text-left text-sm font-semibold text-gray-900 dark:text-gray-100">Score</th>
-                <th className="px-6 py-4 text-right text-sm font-semibold text-gray-900 dark:text-gray-100">Actions</th>
+                <th className="px-6 py-4 text-left text-sm font-semibold text-gray-900">Question</th>
+                <th className="px-6 py-4 text-left text-sm font-semibold text-gray-900">Difficulty</th>
+                <th className="px-6 py-4 text-left text-sm font-semibold text-gray-900">Status</th>
+                <th className="px-6 py-4 text-left text-sm font-semibold text-gray-900">Date</th>
+                {/*<th className="px-6 py-4 text-left text-sm font-semibold text-gray-900">Duration</th>*/}
+                {/*<th className="px-6 py-4 text-left text-sm font-semibold text-gray-900">Score</th>*/}
+                <th className="px-6 py-4 text-right text-sm font-semibold text-gray-900">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
@@ -102,12 +147,14 @@ export default function AttemptHistoryPage() {
                         {attempt.status}
                       </span>
                     </td>
-                    <td className="px-6 py-4 text-sm text-gray-600 dark:text-gray-300">{attempt.date}</td>
-                    <td className="px-6 py-4 text-sm text-gray-600 dark:text-gray-300">{attempt.duration}</td>
-                    <td className="px-6 py-4 text-sm text-gray-600 dark:text-gray-300">{attempt.score}%</td>
+                    <td className="px-6 py-4 text-sm text-gray-600">{formatDate(attempt.attemptedAt)}</td>
+                    {/*<td className="px-6 py-4 text-sm text-gray-600">{attempt.duration}</td>*/}
+                    {/*<td className="px-6 py-4 text-sm text-gray-600">{attempt.score}%</td>*/}
                     <td className="px-6 py-4 text-right">
-                      <button className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors">
-                        <Eye className="w-4 h-4 text-gray-600 dark:text-gray-300" />
+                      <button className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+                              onClick={() => openAttemptDialog(attempt)}
+                      >
+                        <Eye className="w-4 h-4 text-gray-600" />
                       </button>
                     </td>
                   </tr>
@@ -117,6 +164,10 @@ export default function AttemptHistoryPage() {
           </table>
         </div>
       </div>
+
+      {selectedAttempt && selectedQuestion &&(
+          <AttemptDetailsDialog attempt={selectedAttempt} onClose={() => setSelectedAttempt(null)} question={selectedQuestion} />
+      )}
     </div>
   )
 }

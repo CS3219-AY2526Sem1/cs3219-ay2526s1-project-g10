@@ -11,6 +11,8 @@ import { getActiveSession, leaveSession, type MatchQuestion } from "../../servic
 import { useSessionStore } from "../../store/useSessionStore"
 import { useAuthStore } from "../../store/useAuthStore"
 import { Button } from "../../components/ui/button"
+import {createPendingAttempt} from "../../services/history/realHistory";
+import GeminiChatBox from "./components/gemini-chatbot";
 import { getCustomRoomInfo, type CustomRoomParticipant } from "../../services/matching"
 import { Copy } from "lucide-react"
 
@@ -31,6 +33,7 @@ const CollaborationPage = () => {
   const clearSession = useSessionStore((state) => state.clearSession)
   const currentUser = useAuthStore((state) => state.user)
   const [question, setQuestion] = useState<MatchQuestion | null>(session?.question ?? null)
+  const [editorCode, setEditorCode] = useState("");
   const [questionError, setQuestionError] = useState<string | null>(null)
   const [questionLoading, setQuestionLoading] = useState<boolean>(false)
   const previousSessionRef = useRef(session)
@@ -38,6 +41,7 @@ const CollaborationPage = () => {
   const [confirmLeaveOpen, setConfirmLeaveOpen] = useState(false)
   const [isLeaving, setIsLeaving] = useState(false)
   const [leaveError, setLeaveError] = useState<string | null>(null)
+  const [localAttemptId, setAttemptId] = useState(null)
   const [customRoomParticipants, setCustomRoomParticipants] = useState<CustomRoomParticipant[]>([])
   const [roomCode, setRoomCode] = useState<string | null>(null)
 
@@ -153,6 +157,29 @@ const CollaborationPage = () => {
         setSession(activeSession)
         setQuestion(activeSession.question ?? null)
         console.log("Question:", activeSession.question)
+
+        //record attempt in db
+        if(activeSession.question && currentUser) {
+          //only create pending attempt if not already exists
+          if(activeSession.attemptId) {
+            return
+          }
+        try {
+          const pendingAttempt = await createPendingAttempt({
+            userId: currentUser.id,
+            questionId: String(activeSession.question.id),
+            question: activeSession.question
+            })
+
+          setAttemptId(pendingAttempt.id); // update local state to pass to CollaborationEditor
+          const updatedSession = { ...activeSession, attemptId: pendingAttempt.id, }
+          setSession(updatedSession)
+
+        } catch (attemptError) {
+            console.error("Failed to create pending attempt for collaboration session", attemptError)
+          }
+        }
+
         setQuestionError(null)
       } catch (error) {
         if (isCancelled) return
@@ -276,9 +303,15 @@ const CollaborationPage = () => {
             participants={participants}
             onRequestLeave={handleRequestLeave}
             leaving={isLeaving}
+            attemptId={localAttemptId}
+            onCodeChange={setEditorCode}
           />
         </div>
       </div>
+      <GeminiChatBox
+        question={question?.description || ""}
+        code={editorCode}
+      />
       {confirmLeaveOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/70 px-4">
           <div className="w-full max-w-md rounded-xl bg-white p-6 shadow-xl">

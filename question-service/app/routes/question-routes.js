@@ -335,4 +335,24 @@ router.delete("/:id", verifyAdmin, async (req, res) => {
     }
 });
 
+// GET /questions/:id - Retrieve a specific question by ID
+router.get("/:id", async (req, res) => {
+    const {id} = req.params;
+
+    try {
+        const question = await prisma.question.findUnique({
+            where: {id: parseInt(id)},
+        });
+
+        if (!question) {
+            return res.status(404).json({error: "Question not found"});
+        }
+
+        res.json(question);
+    } catch (error) {
+        console.error("Error fetching question:", error);
+        res.status(500).json({error: "Internal Server Error"});
+    }
+});
+
 export default router;
