@@ -70,9 +70,17 @@ jobs:
           echo "NEXT_PUBLIC_USE_MOCK=$NEXT_USE_MOCK" >> "$GITHUB_ENV"
 
           REDIS_HOST='${{ secrets.MATCHING_REDIS_HOST }}'
+          if [ -z "$REDIS_HOST" ]; then
+            REDIS_HOST='${{ secrets.MATCHING_SERVICE_REDIS_HOST }}'
+          fi
+
           REDIS_PORT='${{ secrets.MATCHING_REDIS_PORT }}'
+          if [ -z "$REDIS_PORT" ]; then
+            REDIS_PORT='${{ secrets.MATCHING_SERVICE_REDIS_PORT }}'
+          fi
+
           if [ -z "$REDIS_HOST" ] || [ -z "$REDIS_PORT" ]; then
-            echo "::warning::MATCHING_REDIS_HOST or MATCHING_REDIS_PORT secret missing; matching-service deployment may fail."
+            echo "::warning::Redis host/port secrets missing (MATCHING_REDIS_HOST|MATCHING_SERVICE_REDIS_HOST, MATCHING_REDIS_PORT|MATCHING_SERVICE_REDIS_PORT); matching-service deployment may fail."
           fi
           echo "REDIS_HOST=$REDIS_HOST" >> "$GITHUB_ENV"
           echo "REDIS_PORT=$REDIS_PORT" >> "$GITHUB_ENV"
