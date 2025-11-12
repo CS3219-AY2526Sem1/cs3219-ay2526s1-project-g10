@@ -46,25 +46,30 @@ export default function VerifyEmailPage() {
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center p-4">
-      <div className="w-full max-w-md rounded-lg border border-border bg-card p-6 text-center">
+    <div className="flex min-h-screen items-center justify-center p-4 bg-gray-50 dark:bg-gray-900 transition-colors duration-300">
+      <div className="w-full max-w-md rounded-lg border border-border bg-card dark:bg-gray-800 text-card-foreground p-6 text-center shadow-lg transition-colors">
         <div className="mb-4 text-4xl">📧</div>
-        <h1 className="text-2xl font-semibold mb-2">Check your email</h1>
-        <p className="text-muted-foreground mb-6">
+        <h1 className="text-2xl font-semibold mb-2 text-foreground dark:text-white transition-colors">Check your email</h1>
+        <p className="text-muted-foreground dark:text-gray-100 mb-6">
           We've sent a verification link to{" "}
-          <span className="font-medium text-foreground">{email}</span>
+          <span className="font-medium text-foreground dark:text-white">{email}</span>
         </p>
-        <p className="text-sm text-muted-foreground mb-6">
+        <p className="text-sm text-muted-foreground dark:text-gray-100 mb-6">
           Click the link in the email to verify your email address.
         </p>
 
         {message && (
-          <div className="mb-4 p-3 text-sm bg-blue-50 border border-blue-200 rounded-md">
+          <div className="mb-4 p-3 text-sm rounded-md border bg-blue-50 border-blue-200 text-blue-800 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-200 transition-colors">
             {message}
           </div>
         )}
 
-        <Button onClick={handleResendEmail} disabled={isResending} variant="outline" className="w-full">
+        <Button
+          onClick={handleResendEmail}
+          disabled={isResending}
+          variant="outline"
+          className="w-full dark:bg-white dark:text-black dark:hover:bg-gray-200"
+        >
           {isResending ? "Sending..." : "Resend verification email"}
         </Button>
 
