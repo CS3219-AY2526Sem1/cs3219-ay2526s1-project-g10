@@ -1,16 +1,30 @@
 import axios from "axios";
 
+declare global {
+  interface Window {
+    __ENV?: Record<string, string | undefined>;
+  }
+}
+
 const stripTrailingSlash = (url: string) => url.replace(/\/+$/, "");
 
-const gatewayBase = process.env.NEXT_PUBLIC_API_GATEWAY_URL
-  ? stripTrailingSlash(process.env.NEXT_PUBLIC_API_GATEWAY_URL)
-  : undefined;
+const readRuntimeEnv = (key: string): string | undefined => {
+  if (typeof window !== "undefined" && window.__ENV && typeof window.__ENV[key] === "string") {
+    const value = window.__ENV[key];
+    if (value) return value;
+  }
+  const nodeValue = process.env[key as keyof NodeJS.ProcessEnv];
+  return typeof nodeValue === "string" ? nodeValue : undefined;
+};
+
+const gatewayBaseRaw = readRuntimeEnv("NEXT_PUBLIC_API_GATEWAY_URL");
+const gatewayBase = gatewayBaseRaw ? stripTrailingSlash(gatewayBaseRaw) : undefined;
 
 // Default to the Cloud Run gateway when explicit service URLs are absent.
-const userBase: string = process.env.NEXT_PUBLIC_USER_API
+const userBase: string = readRuntimeEnv("NEXT_PUBLIC_USER_API")
   ?? (gatewayBase ? `${gatewayBase}/users` : "http://localhost:3001");
 
-const matchBase: string = process.env.NEXT_PUBLIC_MATCH_API
+const matchBase: string = readRuntimeEnv("NEXT_PUBLIC_MATCH_API")
   ?? (gatewayBase ? `${gatewayBase}/match` : "http://localhost:3002");
 
 export const userClient = axios.create({

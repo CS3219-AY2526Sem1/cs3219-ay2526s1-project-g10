@@ -16,6 +16,18 @@ export const metadata: Metadata = {
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
+  const runtimeEnv = {
+    NEXT_PUBLIC_API_GATEWAY_URL: process.env.NEXT_PUBLIC_API_GATEWAY_URL ?? "",
+    NEXT_PUBLIC_USER_API: process.env.NEXT_PUBLIC_USER_API ?? "",
+    NEXT_PUBLIC_MATCH_API: process.env.NEXT_PUBLIC_MATCH_API ?? "",
+    NEXT_PUBLIC_USE_MOCK: process.env.NEXT_PUBLIC_USE_MOCK ?? "",
+    NEXT_PUBLIC_SUPABASE_URL: process.env.NEXT_PUBLIC_SUPABASE_URL ?? "",
+    NEXT_PUBLIC_SUPABASE_ANON_KEY: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? "",
+    NEXT_PUBLIC_COLLAB_WS_URL: process.env.NEXT_PUBLIC_COLLAB_WS_URL ?? "",
+  };
+
+  const serializedEnv = JSON.stringify(runtimeEnv).replace(/</g, "\\u003c");
+
   return (
     <html lang="en" suppressHydrationWarning>
       <body className={`${geistSans.variable} ${geistMono.variable} font-sans antialiased`}>
@@ -28,6 +40,10 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             {children}
           </AuthProvider>
         </ThemeProvider>
+        <script
+          data-runtime-env
+          dangerouslySetInnerHTML={{ __html: `window.__ENV=${serializedEnv};` }}
+        />
       </body>
     </html>
   );
