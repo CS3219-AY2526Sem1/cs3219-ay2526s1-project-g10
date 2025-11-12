@@ -27,6 +27,24 @@ PeerPrep is a web-based platform that allows users to solve coding problems with
 ### Question Attempt History
 
 ### Custom Matching Rooms
+Users can create or join custom rooms to collaborate with friends.
+
+**Custom Room Creation:**
+1. User navigates to the matching page.
+2. User clicks `Create/Join Custom Room` button.
+3. User clicks `Create Room` button.
+4. User selects difficulty and topic of choice, then sets a room password.
+5. User clicks `Create Room` button.
+6. Room code is displayed to the user.
+7. User is redirected to the custom room collaboration page.
+
+**Joining a Custom Room:**
+1. User navigates to the matching page.
+2. User clicks `Create/Join Custom Room` button.
+3. User clicks `Join Room` button.
+4. User enters room code and password.
+5. User clicks `Join Room` button.
+6. User is redirected to the custom room collaboration page.
 
 ### AI Assisted Problem-Solving and Chatbot
 
@@ -37,6 +55,7 @@ PeerPrep is a web-based platform that allows users to solve coding problems with
 ### Languages & Frameworks
 - **Node.js** (JavaScript runtime) – to run backend code
 - **Express.js** – to define routes, handle middleware, and create REST APIs
+- **React + Next.js** – frontend
 
 ### Database Layer
 
@@ -51,8 +70,14 @@ PeerPrep is a web-based platform that allows users to solve coding problems with
 
 ## Architecture Diagrams
 
+![Architecture Diagram](./images/ArchitectureDiagram.png)
+
 ---
 
 ## Screenshots
+
+![Matching Page](./images/MatchingPage.png)
+![Question Page](./images/QuestionPage.png)
+![Dark Mode](./images/DarkMode.png)
 
 ---
