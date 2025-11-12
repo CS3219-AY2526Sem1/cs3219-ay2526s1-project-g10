@@ -1,5 +1,13 @@
-const QUESTION_SERVICE_URL = process.env.QUESTION_SERVICE_URL || "http://question-service:3003";
+// import "dotenv/config";
 
+// const QUESTION_SERVICE_URL = process.env.QUESTION_SERVICE_URL;
+
+const QUESTION_SERVICE_URL =
+  typeof window === "undefined"
+    ? process.env.QUESTION_SERVICE_URL // backend (matching-service)
+    : process.env.NEXT_PUBLIC_API_GATEWAY_URL; // frontend (browser)
+
+    
 export async function fetchRandomQuestion({ difficulty, topic }) {
   const searchParams = new URLSearchParams();
 

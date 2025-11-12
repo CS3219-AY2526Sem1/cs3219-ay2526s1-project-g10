@@ -15,7 +15,7 @@ export interface AdminAttempt extends Attempt {
 }
 
 export async function getUserAttempts(userId: string): Promise<Attempt[]> {
-  const response = await fetch(`/api/users/${userId}/attempts`, {
+  const response = await fetch(`${process.env.NEXT_PUBLIC_API_GATEWAY_URL}/users/${userId}/attempts`, {
     headers: {
       Authorization: `Bearer ${localStorage.getItem("auth_token")}`,
     },
@@ -29,7 +29,7 @@ export async function getUserAttempts(userId: string): Promise<Attempt[]> {
 }
 
 export async function getAllAttempts(): Promise<AdminAttempt[]> {
-  const response = await fetch("/api/admin/attempts", {
+  const response = await fetch("${process.env.NEXT_PUBLIC_API_GATEWAY_URL}/admin/attempts", {
     headers: {
       Authorization: `Bearer ${localStorage.getItem("auth_token")}`,
     },

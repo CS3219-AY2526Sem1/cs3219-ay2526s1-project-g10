@@ -9,7 +9,7 @@ const port = process.env.USER_SERVICE_PORT || 3001;
 
 const server = http.createServer(index);
 
-server.listen(port, () => {
+server.listen(port,  "0.0.0.0", () => {
   console.log("User service server listening on http://localhost:" + port);
 });
 

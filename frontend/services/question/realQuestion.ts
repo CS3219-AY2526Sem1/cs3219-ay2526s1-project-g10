@@ -8,7 +8,7 @@ export interface Question {
   language?: string
 }
 
-const API_URL = process.env.NEXT_PUBLIC_QUESTION_SERVICE_URL
+const API_URL = process.env.NEXT_PUBLIC_API_GATEWAY_URL
 
 console.log("API_URL =", API_URL);
 
@@ -42,7 +42,7 @@ export async function getQuestions(page = 1, limit = 100): Promise<{
     const token = localStorage.getItem("auth_token")
     const params = new URLSearchParams({ page: String(page), limit: String(limit) })
 
-    const response = await fetch(`${API_URL}/questions?${params}`, {
+    const response = await fetch(`${process.env.NEXT_PUBLIC_API_GATEWAY_URL}/questions?${params}`, {
       headers: {
         ...(token && { Authorization: `Bearer ${token}` }),
       },

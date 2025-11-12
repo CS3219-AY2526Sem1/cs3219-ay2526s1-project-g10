@@ -1,4 +1,4 @@
-version: '3.8'
+version: "3.8"
 services:
   user-service:
     build: ./user-service
@@ -71,6 +71,22 @@ services:
       - "6379:6379"
     restart: unless-stopped
 
+  api-gateway:
+    build: ./api-gateway
+    ports:
+      - "8080:8080"
+    env_file:
+      - ./api-gateway/.env
+    depends_on:
+      - user-service
+      - question-service
+      - matching-service
+      - collab-service
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/healthz"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
 
 volumes:
   db_data:
