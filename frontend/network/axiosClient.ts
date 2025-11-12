@@ -8,6 +8,8 @@ declare global {
 
 const stripTrailingSlash = (url: string) => url.replace(/\/+$/, "");
 
+const HARD_CODED_GATEWAY = "https://api-gateway-j4i3ud5cyq-as.a.run.app";
+
 const readRuntimeEnv = (key: string): string | undefined => {
   if (typeof window !== "undefined" && window.__ENV && typeof window.__ENV[key] === "string") {
     const value = window.__ENV[key];
@@ -18,7 +20,8 @@ const readRuntimeEnv = (key: string): string | undefined => {
 };
 
 const gatewayBaseRaw = readRuntimeEnv("NEXT_PUBLIC_API_GATEWAY_URL");
-const gatewayBase = gatewayBaseRaw ? stripTrailingSlash(gatewayBaseRaw) : undefined;
+const fallbackGateway = stripTrailingSlash(HARD_CODED_GATEWAY);
+const gatewayBase = gatewayBaseRaw ? stripTrailingSlash(gatewayBaseRaw) : fallbackGateway;
 
 // Default to the Cloud Run gateway when explicit service URLs are absent.
 const userBase: string = readRuntimeEnv("NEXT_PUBLIC_USER_API")
