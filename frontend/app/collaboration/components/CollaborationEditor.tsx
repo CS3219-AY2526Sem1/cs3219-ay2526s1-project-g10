@@ -31,6 +31,7 @@ interface CollaborationEditorProps {
   participants: Participant[]
   onRequestLeave: () => void
   leaving: boolean
+  onCodeChange?: (code: string) => void
 }
 
 const LANGUAGES = [
@@ -46,7 +47,7 @@ const API = axios.create({
 const DEFAULT_COLLAB_WS = "ws://localhost:3004/collab"
 
 
-export default function CollaborationEditor({ roomId, participants, onRequestLeave, leaving }: CollaborationEditorProps) {
+export default function CollaborationEditor({ roomId, participants, onRequestLeave, leaving, onCodeChange }: CollaborationEditorProps) {
   const [language, setLanguage] = useState<string>("python")
   const [codeRunning, setCodeRunning] = useState<boolean>(false);
   const [codeOutput, setCodeOutput] = useState<string | null>(null);
@@ -134,6 +135,12 @@ export default function CollaborationEditor({ roomId, participants, onRequestLea
     const binding = new MonacoBinding(yText, editor.getModel(), new Set([editor]), provider.awareness)
     bindingRef.current = binding
     editorRef.current = editor
+
+    editor.onDidChangeModelContent(() => {
+    const newCode = editor.getValue()
+    onCodeChange?.(newCode)
+    })
+
     const awareness = provider.awareness
     if (awarenessChangeHandlerRef.current) {
       awareness.off("change", awarenessChangeHandlerRef.current)

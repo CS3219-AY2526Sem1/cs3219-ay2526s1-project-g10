@@ -11,6 +11,7 @@ import { getActiveSession, leaveSession, type MatchQuestion } from "../../servic
 import { useSessionStore } from "../../store/useSessionStore"
 import { useAuthStore } from "../../store/useAuthStore"
 import { Button } from "../../components/ui/button"
+import GeminiChatBox from "./components/gemini-chatbot";
 import { getCustomRoomInfo, type CustomRoomParticipant } from "../../services/matching"
 import { Copy } from "lucide-react"
 
@@ -31,6 +32,7 @@ const CollaborationPage = () => {
   const clearSession = useSessionStore((state) => state.clearSession)
   const currentUser = useAuthStore((state) => state.user)
   const [question, setQuestion] = useState<MatchQuestion | null>(session?.question ?? null)
+  const [editorCode, setEditorCode] = useState("");
   const [questionError, setQuestionError] = useState<string | null>(null)
   const [questionLoading, setQuestionLoading] = useState<boolean>(false)
   const previousSessionRef = useRef(session)
@@ -276,9 +278,14 @@ const CollaborationPage = () => {
             participants={participants}
             onRequestLeave={handleRequestLeave}
             leaving={isLeaving}
+            onCodeChange={setEditorCode}
           />
         </div>
       </div>
+      <GeminiChatBox
+        question={question?.description || ""}
+        code={editorCode}
+      />
       {confirmLeaveOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/70 px-4">
           <div className="w-full max-w-md rounded-xl bg-white p-6 shadow-xl">
