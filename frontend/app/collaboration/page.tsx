@@ -169,8 +169,8 @@ const CollaborationPage = () => {
             question: activeSession.question
             })
 
-          setAttemptId(pendingAttempt.id); // update local state to pass to CollaborationEditor
-          const updatedSession = { ...activeSession, attemptId: pendingAttempt.id, }
+          setAttemptId(String(pendingAttempt.id)); // update local state to pass to CollaborationEditor
+          const updatedSession = { ...activeSession, attemptId: String(pendingAttempt.id) }
           setSession(updatedSession)
 
         } catch (attemptError) {

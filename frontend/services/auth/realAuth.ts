@@ -55,8 +55,19 @@ export async function login(email: string, password: string): Promise<AuthRespon
   }
 }
 
-export async function signup(username: string, email: string, password: string): Promise<AuthResponse> {
-  const response = await userClient.post("/auth/signup", { username, email, password })
+export async function signup(username: string, email: string, password: string, adminCode?: string): Promise<AuthResponse> {
+  const requestPayload: Record<string, string> = {
+    username,
+    email,
+    password,
+  }
+
+  const trimmedAdminCode = adminCode?.trim()
+  if (trimmedAdminCode) {
+    requestPayload.adminCode = trimmedAdminCode
+  }
+
+  const response = await userClient.post("/auth/signup", requestPayload)
   const payload = (response.data as { message?: string; data?: any }).data
 
   if (!payload) {

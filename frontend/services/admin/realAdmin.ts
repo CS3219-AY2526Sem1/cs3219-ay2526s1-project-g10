@@ -15,11 +15,32 @@ export interface AdminStats {
   activeUsers: number
 }
 
+function getAuthToken(): string {
+  if (typeof window === "undefined") {
+    throw new Error("Authentication token is not available in this environment.")
+  }
+
+  const token = window.localStorage.getItem("auth_token")
+
+  if (!token) {
+    throw new Error("Authentication token missing. Please sign in again.")
+  }
+
+  return token
+}
+
+function buildAuthHeaders(additional?: Record<string, string>): Record<string, string> {
+  const token = getAuthToken()
+
+  return {
+    Authorization: `Bearer ${token}`,
+    ...(additional ?? {}),
+  }
+}
+
 export async function getAdminStats(): Promise<AdminStats> {
   const response = await fetch("/api/admin/stats", {
-    headers: {
-      Authorization: `Bearer ${localStorage.getItem("auth_token")}`,
-    },
+    headers: buildAuthHeaders(),
   })
 
   if (!response.ok) {
@@ -34,9 +55,7 @@ export async function getAllUsers(search?: string): Promise<AdminUser[]> {
   if (search) params.append("search", search)
 
   const response = await fetch(`/api/admin/users?${params}`, {
-    headers: {
-      Authorization: `Bearer ${localStorage.getItem("auth_token")}`,
-    },
+    headers: buildAuthHeaders(),
   })
 
   if (!response.ok) {
@@ -49,9 +68,7 @@ export async function getAllUsers(search?: string): Promise<AdminUser[]> {
 export async function deleteUser(userId: string): Promise<void> {
   const response = await fetch(`/api/admin/users/${userId}`, {
     method: "DELETE",
-    headers: {
-      Authorization: `Bearer ${localStorage.getItem("auth_token")}`,
-    },
+    headers: buildAuthHeaders(),
   })
 
   if (!response.ok) {
@@ -62,10 +79,7 @@ export async function deleteUser(userId: string): Promise<void> {
 export async function updateUserRole(userId: string, role: "user" | "admin"): Promise<void> {
   const response = await fetch(`/api/admin/users/${userId}/role`, {
     method: "PATCH",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${localStorage.getItem("auth_token")}`,
-    },
+    headers: buildAuthHeaders({ "Content-Type": "application/json" }),
     body: JSON.stringify({ role }),
   })
 

@@ -1,5 +1,5 @@
 import supabase from "../supabaseClient.js";
-import { mapProfileToResponse } from "../app/controller/user-controller.js";
+import { mapProfileToResponse, updateAuthAdminMetadata } from "../app/controller/user-controller.js";
 
 export async function verifyAuth(req, res, next) {
   try {
@@ -30,6 +30,30 @@ export async function verifyAuth(req, res, next) {
     if (profileError || !profile) {
       console.log("User profile not found");
       return res.status(401).json({ error: "User profile not found" });
+    }
+
+  const metadataAdmin = data.user?.user_metadata?.isAdmin;
+  const resolvedIsAdmin = metadataAdmin === undefined ? profile.isAdmin === true : metadataAdmin === true;
+
+    if (profile.isAdmin !== resolvedIsAdmin) {
+      const { error: syncError } = await supabase
+        .from("users")
+        .update({ isAdmin: resolvedIsAdmin })
+        .eq("id", profile.id);
+
+      if (syncError) {
+        console.error("Failed to synchronise admin flag", syncError);
+      } else {
+        profile.isAdmin = resolvedIsAdmin;
+      }
+    }
+
+    if (metadataAdmin === undefined) {
+      try {
+        await updateAuthAdminMetadata(profile.id, resolvedIsAdmin === true);
+      } catch (metadataSyncError) {
+        console.error("Failed to backfill admin metadata during auth verification", metadataSyncError);
+      }
     }
 
     req.user = mapProfileToResponse(profile, data.user.email_confirmed_at);

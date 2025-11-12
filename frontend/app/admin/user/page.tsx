@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react"
 import Link from "next/link"
-import { Search, Edit, Trash2, UserPlus } from "lucide-react"
+import { Search, Edit, Trash2, UserPlus, ArrowLeft } from "lucide-react"
 import { getAllUsers, deleteUser as deleteUserService, type AdminUser } from "../../../services/admin"
 
 export default function AdminUsersPage() {
@@ -41,36 +41,17 @@ export default function AdminUsersPage() {
       {/* Header */}
       <header className="bg-blue-200 border-b border-blue-300">
         <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
-          {/* Left side: logo + navigation */}
-          <div className="flex items-center gap-8">
-            <Link href="/admin" className="text-2xl font-bold text-gray-900">
-              PeerPrep Admin
-            </Link>
-
-          {/* Navigation Links */}
-          <nav className="flex items-center gap-4">
+          <div className="flex items-center gap-4">
             <Link
-              href="/admin/question"
+              href="/main"
               className="flex items-center gap-2 rounded-full bg-blue-300 px-5 py-2 text-sm font-medium text-gray-900 hover:bg-blue-400 transition-colors"
             >
-              Manage Questions
+              <ArrowLeft className="w-4 h-4" />
+              Back to main
             </Link>
-            <Link
-              href="/admin/user"
-              className="flex items-center gap-2 rounded-full bg-blue-400 px-5 py-2 text-sm font-medium text-gray-900 hover:bg-blue-400 transition-colors"
-            >
-              Manage Users
-            </Link>
-            <Link
-              href="/admin/history"
-              className="flex items-center gap-2 rounded-full bg-blue-300 px-5 py-2 text-sm font-medium text-gray-900 hover:bg-blue-500 transition-colors"
-            >
-              View History
-            </Link>
-          </nav>
-        </div>
+            <span className="text-2xl font-bold text-gray-900">User Management</span>
+          </div>
 
-        {/* Right side: profile button */}
           <Link
             href="/user/profile"
             className="w-12 h-12 rounded-full bg-blue-300 border-2 border-blue-400 flex items-center justify-center hover:bg-blue-400 transition-colors"

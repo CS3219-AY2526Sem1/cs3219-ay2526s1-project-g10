@@ -1,5 +1,6 @@
 "use client"
 
+import Link from "next/link"
 import { useSearchParams } from "next/navigation"
 import { useState } from "react"
 import { Button } from "../../../components/ui/button"
@@ -72,9 +73,11 @@ export default function VerifyEmailPage() {
           {isResending ? "Sending..." : "Resend verification email"}
         </Button>
 
-        <p className="text-xs text-muted-foreground dark:text-gray-300 mt-4">
-          Didn't receive the email? Check your spam folder.
-        </p>
+        <Button asChild variant="ghost" className="mt-4 w-full text-sm font-medium text-blue-600">
+          <Link href="/user/login">Back to login</Link>
+        </Button>
+
+        <p className="text-xs text-muted-foreground mt-4">Didn't receive the email? Check your spam folder.</p>
       </div>
     </div>
   )

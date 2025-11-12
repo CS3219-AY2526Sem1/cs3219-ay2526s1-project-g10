@@ -1,21 +1,24 @@
 // Real history service
-import {MatchQuestion} from "../matching";
+import { MatchQuestion } from "../matching";
 
 export interface Attempt {
-  id: string
-  questionTitle: string
-  questionId: string
-  questionJson?: MatchQuestion
-  difficulty: "Easy" | "Medium" | "Hard"
+  id: number
+  userId: string
+  questionId: number | null
+  questionJson?: MatchQuestion | null
+  attemptedAt: string
   status: "COMPLETED" | "PENDING"
-  date: string
+  code?: string | null
+  output?: string | null
+  // Optional client-only fields populated after fetching question metadata
+  questionTitle?: string
+  difficulty?: "Easy" | "Medium" | "Hard"
 }
 
 const API_URL = process.env.NEXT_PUBLIC_QUESTION_SERVICE_URL
 
 export interface AdminAttempt extends Attempt {
   userName: string
-  userId: string
 }
 
 export async function getUserAttempts(userId: string): Promise<Attempt[]> {
@@ -43,7 +46,7 @@ export async function createPendingAttempt(attemptData: {
     userId: attemptData.userId,
     questionId: attemptData.questionId,
     attemptedAt: new Date().toISOString(),
-    questionJson: safeQuestion
+    questionJson: safeQuestion,
   }
 
   const response = await fetch(`${API_URL}/history`, {
@@ -63,12 +66,14 @@ export async function createPendingAttempt(attemptData: {
 }
 
 // Update attempt code, duration
-export async function updateAttempt( attemptId: string, updateData: Partial<
-{ code: string,
-  output: string,
-  status: "COMPLETED",
-  questionId: string
-}>
+export async function updateAttempt(
+  attemptId: string,
+  updateData: Partial<{
+    code: string
+    output: string
+    status: "COMPLETED"
+    questionId: string
+  }>,
 ): Promise<Attempt> {
   const response = await fetch(`${API_URL}/history/${attemptId}`, {
     method: "PATCH",
