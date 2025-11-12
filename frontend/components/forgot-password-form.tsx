@@ -63,13 +63,13 @@ export function ForgotPasswordForm() {
           </form>
         ) : (
           <div className="space-y-4">
-            <div className="rounded-lg bg-muted p-4 text-sm text-muted-foreground">
+            <div className="rounded-lg bg-muted p-4 text-sm text-muted-foreground border dark:bg-gray-800 dark:border-gray-700 dark:text-gray-200">
               If an account exists for {email}, you will receive a password reset link shortly.
             </div>
             <Button
               type="button"
               variant="outline"
-              className="w-full bg-transparent"
+              className="w-full bg-transparent dark:bg-white dark:text-black"
               onClick={() => {
                 setIsSubmitted(false)
                 setEmail("")
