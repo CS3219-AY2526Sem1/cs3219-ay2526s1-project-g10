@@ -22,7 +22,6 @@ COPY --from=builder /app/next.config.mjs ./next.config.mjs
 COPY --from=builder /app/tsconfig.json ./tsconfig.json
 COPY --from=builder /app/components.json ./components.json
 COPY --from=builder /app/postcss.config.mjs ./postcss.config.mjs
-COPY --from=builder /app/tailwind.config.js ./tailwind.config.js
 COPY --from=deps /app/node_modules/typescript /app/node_modules/typescript
 COPY --from=deps /app/node_modules/.bin/tsc /app/node_modules/.bin/tsc
 COPY --from=deps /app/node_modules/.bin/tsserver /app/node_modules/.bin/tsserver
