@@ -2,15 +2,21 @@
 
 import { useState, useEffect } from "react"
 import { Eye } from "lucide-react"
-import { getUserAttempts, type Attempt } from "../../services/history"
+import { getUserAttempts } from "../../services/history"
+import type { Attempt } from "../../services/history/realHistory"
 import { useAuth } from "../../contexts/auth-context"
 import { AppHeader } from "../../components/navigation/AppHeader"
-import {getQuestion} from "../../services/question";
-import AttemptDetailsDialog from "./components/attemptDetailsDialog";
+import { getQuestion } from "../../services/question"
+import AttemptDetailsDialog from "./components/attemptDetailsDialog"
+
+type EnrichedAttempt = Attempt & {
+  questionTitle: string
+  difficulty: "Easy" | "Medium" | "Hard"
+}
 
 export default function AttemptHistoryPage() {
-  const [attempts, setAttempts] = useState<Attempt[]>([])
-  const [selectedAttempt, setSelectedAttempt] = useState<Attempt | null>(null)
+  const [attempts, setAttempts] = useState<EnrichedAttempt[]>([])
+  const [selectedAttempt, setSelectedAttempt] = useState<EnrichedAttempt | null>(null)
   const [selectedQuestion, setSelectedQuestion] = useState<any>(null)
   const [searchQuery, setSearchQuery] = useState("")
   const [loading, setLoading] = useState(true)
@@ -23,18 +29,37 @@ export default function AttemptHistoryPage() {
       try {
         const data = await getUserAttempts(user.id)
 
-        //fetch question details for each attempt
         const questionDetails = await Promise.all(
-          data.map(async (attempt) => {
-            const question = await getQuestion(attempt.questionId)
-            return {
-              ...attempt,
-              questionTitle: question ? question.title : "Unknown Question",
-                difficulty: question ? question.difficulty : "Easy",
+          data.map(async (attempt: Attempt): Promise<EnrichedAttempt> => {
+            const baseTitle = attempt.questionJson?.title ?? "Unknown Question"
+            const baseDifficulty = normalizeDifficultyLabel(attempt.questionJson?.difficulty)
+
+            if (!attempt.questionId) {
+              return {
+                ...attempt,
+                questionTitle: baseTitle,
+                difficulty: baseDifficulty,
+              }
+            }
+
+            try {
+              const question = await getQuestion(String(attempt.questionId))
+              return {
+                ...attempt,
+                questionTitle: question?.title ?? baseTitle,
+                difficulty: question?.difficulty ?? baseDifficulty,
+              }
+            } catch (error) {
+              console.warn(`Failed to load question ${attempt.questionId}`, error)
+              return {
+                ...attempt,
+                questionTitle: baseTitle,
+                difficulty: baseDifficulty,
+              }
             }
           }),
         )
-        console.log("attempts", attempts)
+
         setAttempts(questionDetails)
 
       } catch (error) {
@@ -88,7 +113,7 @@ export default function AttemptHistoryPage() {
     return status === "COMPLETED" ? "bg-blue-100 text-blue-800" : "bg-orange-100 text-orange-800"
   }
 
-  const openAttemptDialog = async (attempt: Attempt) => {
+  const openAttemptDialog = async (attempt: EnrichedAttempt) => {
     if (!attempt.questionJson) return;
     setSelectedQuestion(attempt.questionJson);
     setSelectedAttempt(attempt)
@@ -165,9 +190,17 @@ export default function AttemptHistoryPage() {
         </div>
       </div>
 
-      {selectedAttempt && selectedQuestion &&(
-          <AttemptDetailsDialog attempt={selectedAttempt} onClose={() => setSelectedAttempt(null)} question={selectedQuestion} />
+      {selectedAttempt && selectedQuestion && (
+        <AttemptDetailsDialog attempt={selectedAttempt} onClose={() => setSelectedAttempt(null)} question={selectedQuestion} />
       )}
     </div>
   )
+}
+
+function normalizeDifficultyLabel(value?: string | null): "Easy" | "Medium" | "Hard" {
+  if (!value) return "Easy"
+  const upper = value.toString().trim().toUpperCase()
+  if (upper === "MEDIUM") return "Medium"
+  if (upper === "HARD") return "Hard"
+  return "Easy"
 }

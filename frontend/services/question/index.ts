@@ -5,7 +5,7 @@ import * as mockQuestion from "./mockQuestion"
 import * as realQuestion from "./realQuestion"
 
 // Re-export shared types from real service definition
-export type { Question } from "./realQuestion"
+export type { Question, QuestionListResponse, QuestionPayload, QuestionUpdatePayload } from "./realQuestion"
 
 const svc = USE_MOCK ? mockQuestion : realQuestion
 

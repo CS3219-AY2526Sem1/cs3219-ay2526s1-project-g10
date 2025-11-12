@@ -1,86 +1,65 @@
 // Mock history service
-import {MatchQuestion} from "../matching";
+import type { Attempt as RealAttempt, AdminAttempt as RealAdminAttempt } from "./realHistory"
 
-export interface Attempt {
-  questionId: string
-  questionJson?: MatchQuestion
-  id: string
-  questionTitle: string
-  difficulty: "Easy" | "Medium" | "Hard"
-  status: "Completed" | "In Progress" | "Failed"
-  date: string
-}
-
-export interface AdminAttempt extends Attempt {
-  userName: string
-  userId: string
-}
+export type Attempt = RealAttempt
+export type AdminAttempt = RealAdminAttempt
 
 const MOCK_USER_ATTEMPTS: Attempt[] = [
   {
-    id: "1",
+    id: 1,
+    userId: "1",
+    questionId: 101,
+    attemptedAt: "2024-03-15T10:30:00.000Z",
+    status: "COMPLETED",
     questionTitle: "Two Sum",
     difficulty: "Easy",
-    status: "Completed",
-    score: 95,
-    date: "2024-03-15",
-    duration: "15 mins",
-    questionId: ""
+    code: "function twoSum() { /* ... */ }",
+    output: "[0,1]",
   },
   {
-    id: "2",
+    id: 2,
+    userId: "1",
+    questionId: 202,
+    attemptedAt: "2024-03-14T14:05:00.000Z",
+    status: "COMPLETED",
     questionTitle: "Reverse Linked List",
     difficulty: "Medium",
-    status: "Completed",
-    score: 88,
-    date: "2024-03-14",
-    duration: "25 mins",
-    questionId: ""
+    code: "function reverseList() { /* ... */ }",
+    output: "1 -> 3 -> 2",
   },
   {
-    id: "3",
+    id: 3,
+    userId: "1",
+    questionId: null,
+    attemptedAt: "2024-03-16T08:12:00.000Z",
+    status: "PENDING",
     questionTitle: "Binary Tree Traversal",
     difficulty: "Medium",
-    status: "In Progress",
-    score: 0,
-    date: "2024-03-16",
-    duration: "10 mins",
+    code: "",
+    output: "",
   },
 ]
 
 const MOCK_ALL_ATTEMPTS: AdminAttempt[] = [
   {
-    id: "1",
-    userId: "1",
-    userName: "John Doe",
-    questionTitle: "Two Sum",
-    difficulty: "Easy",
-    status: "Completed",
-    score: 95,
-    date: "2024-03-15",
-    duration: "15 mins",
-  },
-  {
-    id: "2",
+    id: 4,
     userId: "2",
-    userName: "Jane Smith",
-    questionTitle: "Reverse Linked List",
+    questionId: 303,
+    attemptedAt: "2024-03-12T09:00:00.000Z",
+    status: "COMPLETED",
+    questionTitle: "Merge Intervals",
     difficulty: "Medium",
-    status: "Completed",
-    score: 88,
-    date: "2024-03-14",
-    duration: "25 mins",
+    userName: "Jane Smith",
   },
   {
-    id: "3",
-    userId: "1",
-    userName: "John Doe",
-    questionTitle: "Binary Tree Traversal",
-    difficulty: "Medium",
-    status: "In Progress",
-    score: 0,
-    date: "2024-03-16",
-    duration: "10 mins",
+    id: 5,
+    userId: "3",
+    questionId: 404,
+    attemptedAt: "2024-03-11T16:45:00.000Z",
+    status: "COMPLETED",
+    questionTitle: "LRU Cache",
+    difficulty: "Hard",
+    userName: "Alex Johnson",
   },
 ]
 
