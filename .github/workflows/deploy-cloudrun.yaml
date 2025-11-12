@@ -179,7 +179,7 @@ jobs:
           fi
           EXTRA_FLAGS=""
           if [ -n "$VPC_CONNECTOR" ]; then
-            EXTRA_FLAGS="--vpc-connector=$VPC_CONNECTOR --vpc-egress=all-traffic"
+            EXTRA_FLAGS="--vpc-connector=$VPC_CONNECTOR --vpc-egress=private-ranges-only"
           fi
           ENV_FLAGS="--set-env-vars=QUESTION_SERVICE_URL=$QUESTION_SERVICE_URL"
           if [ -n "$REDIS_HOST" ] && [ -n "$REDIS_PORT" ]; then

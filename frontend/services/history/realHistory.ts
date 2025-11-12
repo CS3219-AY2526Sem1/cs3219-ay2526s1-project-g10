@@ -1,5 +1,6 @@
 // Real history service
-import { MatchQuestion } from "../matching";
+import { MatchQuestion } from "../matching"
+import { getRuntimeEnv, resolveGatewayBase, stripTrailingSlash } from "../../lib/runtimeEnv"
 
 export interface Attempt {
   id: number
@@ -15,24 +16,26 @@ export interface Attempt {
   difficulty?: "Easy" | "Medium" | "Hard"
 }
 
-const QUESTION_SERVICE_URL = process.env.NEXT_PUBLIC_QUESTION_SERVICE_URL?.replace(/\/$/, "")
-const API_GATEWAY_URL = process.env.NEXT_PUBLIC_API_GATEWAY_URL?.replace(/\/$/, "")
+const gatewayBase = stripTrailingSlash(resolveGatewayBase())
+const questionServiceOverride = getRuntimeEnv("NEXT_PUBLIC_QUESTION_SERVICE_URL")
+const questionServiceBase = questionServiceOverride ? stripTrailingSlash(questionServiceOverride) : undefined
 
 function resolveHistoryUrl(gatewayPath: string, questionServicePath: string): string {
-  if (API_GATEWAY_URL && API_GATEWAY_URL.length > 0) {
-    return `${API_GATEWAY_URL}${gatewayPath}`
+  if (gatewayBase && gatewayBase.length > 0) {
+    return `${gatewayBase}${gatewayPath}`
   }
-  if (QUESTION_SERVICE_URL && QUESTION_SERVICE_URL.length > 0) {
-    return `${QUESTION_SERVICE_URL}${questionServicePath}`
+  if (questionServiceBase && questionServiceBase.length > 0) {
+    return `${questionServiceBase}${questionServicePath}`
   }
   throw new Error("History service URL is not configured")
 }
 
 function requireQuestionService(path: string): string {
-  if (!QUESTION_SERVICE_URL || QUESTION_SERVICE_URL.length === 0) {
+  const base = questionServiceBase ?? gatewayBase
+  if (!base || base.length === 0) {
     throw new Error("Question service URL is not configured")
   }
-  return `${QUESTION_SERVICE_URL}${path}`
+  return `${base}${path}`
 }
 
 export interface AdminAttempt extends Attempt {
@@ -110,11 +113,12 @@ export async function updateAttempt(
 }
 
 export async function getAllAttempts(): Promise<AdminAttempt[]> {
-  if (!API_GATEWAY_URL || API_GATEWAY_URL.length === 0) {
-    throw new Error("NEXT_PUBLIC_API_GATEWAY_URL must be set to fetch admin attempts")
+  const base = gatewayBase ?? questionServiceBase
+  if (!base || base.length === 0) {
+    throw new Error("History service URL is not configured")
   }
 
-  const response = await fetch(`${API_GATEWAY_URL}/admin/attempts`, {
+  const response = await fetch(`${base}/admin/attempts`, {
     headers: {
       Authorization: `Bearer ${localStorage.getItem("auth_token")}`,
     },
