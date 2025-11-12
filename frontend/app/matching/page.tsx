@@ -324,9 +324,9 @@ function MatchPageContent() {
             ) : matchResults.length > 0 ? (
               <div className="space-y-4">
                 {matchResults.map((match) => (
-                  <div key={match.id} className="flex items-center justify-between rounded-2xl bg-white p-6 shadow-sm">
+                  <div key={match.id} className="flex items-center justify-between rounded-2xl bg-white dark:bg-gray-800 p-6 shadow-sm transition-colors">
                     <div className="flex items-center gap-4">
-                      <div className="flex h-14 w-14 items-center justify-center rounded-full border-2 border-gray-900 bg-blue-200">
+                      <div className="flex h-14 w-14 items-center justify-center rounded-full border-2 border-gray-900 dark:border-gray-100 bg-blue-200 dark:bg-gray-700 transition-colors">
                         <User className="h-7 w-7 text-gray-900 dark:text-gray-100" />
                       </div>
                       <span className="text-xl font-medium text-gray-900 dark:text-gray-100">{match.name}</span>
