@@ -192,7 +192,79 @@ The Collaboration Service retrieves this sessionId to connect both users into a 
 
 ### Collaboration Service
 
+The Collaboration Service powers real-time pair programming inside PeerPrep. It exposes a REST surface for AI chat and health checks, while the primary communication happens over a WebSocket endpoint backed by **Yjs** shared documents. Every coding room is represented by a Yjs doc that keeps editor content, output panels, and room chat in sync across participants.
+
+#### **Core Responsibilities**
+
+- Maintain low-latency WebSocket connections so participants see live cursor and text updates
+- Persist shared editor state in-memory using Yjs documents that automatically handle conflict resolution
+- Broadcast shared outputs (e.g., code execution results) and room chat messages to all peers
+- Host the Gemini chatbot entrypoint (`POST /ai/chat`) for AI-assisted hints and debugging tips
+- Provide `/healthz` and `/` HTTP probes for Cloud Run readiness checks
+
+#### **Real-Time Architecture**
+
+1. Clients connect to `wss://<service>/collab?room=<sessionId>` after the Matching Service issues a session token.
+2. The service normalises the `room` query and maps it to a Yjs document name; new documents are created on demand.
+3. `y-websocket` handles CRDT sync: each keystroke or cursor move mutates the shared doc and is reconciled across peers without locks.
+4. When a client disconnects, Yjs automatically garbage-collects orphaned updates, keeping memory usage predictable.
+5. HTTP upgrades are guarded so only the configured `COLLAB_WS_PATH` is accepted; everything else is rejected early to conserve resources.
+6. Allowed origins are restricted through `COLLAB_ALLOWED_ORIGINS`, ensuring only approved frontends can establish CORS or WS connections.
+
+#### **Integration Points**
+
+- **Matching Service** supplies the `sessionId` that becomes the collaboration room identifier.
+- **History Service** listens for code/output updates (via the frontend) and persists the latest attempt snapshot whenever shared output changes.
+- **Frontend** uses `NEXT_PUBLIC_COLLAB_WS_URL` to point the editor at the deployed WebSocket endpoint and hydrates the Monaco editor via Yjs bindings.
+- **AI Chatbot** consumes the same room context by sending question, code, and user prompts to `/ai/chat`, which forwards requests to Google Gemini.
+
+#### **Endpoints & Protocols**
+
+| Type | Path | Description |
+|------|------|-------------|
+| HTTP | `GET /` | Basic readiness probe | 
+| HTTP | `GET /healthz` | Cloud Run health check |
+| HTTP | `POST /ai/chat` | Gemini-backed assistant responses |
+| WS | `GET /collab` | Upgraded to WebSocket; synchronises editor, output, and room chat |
+
+#### **Technologies**
+
+- **Express + Node.js** for HTTP routing and upgrade negotiation
+- **ws** for lightweight WebSocket server management
+- **Yjs + y-websocket** for conflict-free shared state replication
+- **dotenv + configurable env vars** (`COLLAB_ALLOWED_ORIGINS`, `COLLAB_WS_PATH`, `GEMINI_API_KEY`) for deploy-time flexibility
+
+#### **Operational Considerations**
+
+- Designed as a single-process server so Cloud Run instances can handle both HTTP and WS traffic without sidecars.
+- Gracefully rejects invalid upgrade requests to avoid accidental DOS from incorrect paths.
+- Ready for horizontal scaling: each instance is stateless beyond in-memory Yjs docs; clients reconnect and resync automatically when moved between instances.
+
 ### Live Chat
+
+The Live Chat feature is embedded inside the collaboration sidebar to let matched partners exchange messages without leaving the shared editor. Messages ride on the same Yjs document as the code editor, so chat history and typing indicators stay perfectly in sync even when participants reconnect.
+
+#### **Core Responsibilities**
+
+- Provide a low-latency text channel that mirrors in real time across all collaborators
+- Persist the active conversation in the shared Yjs array so late joiners can replay context instantly
+- Auto-scroll and group messages by sender, making it easy to follow the discussion alongside the code
+- Respect the same room lifecycle as the editor (cleanup happens when the room shuts down)
+
+#### **How It Works**
+
+1. When the editor mounts, the frontend calls `ydoc.getArray("chat")` to retrieve a shared Yjs array.
+2. Sending a message pushes `{ id, text, ts }` into the array; Yjs emits updates to every connected peer.
+3. Listeners sort messages by timestamp to guarantee chronological ordering, then render them in the chat pane.
+4. Each client reuses the y-websocket awareness client ID to tag its own messages; recipients see a clear “You” vs “User <id>” badge.
+5. When the component unmounts, observers detach so there are no memory leaks across room switches.
+
+#### **Integration Points**
+
+- Shares the same WebSocket connection as the code editor (`/collab`), so no additional network channels are required.
+- Works alongside the AI Assistant tab: users can toggle between peer chat and Gemini responses while remaining in the same UI surface.
+- History service updates piggyback on the same Yjs document; whenever output changes, chat remains available for audit context.
+
 
 ### Question Attempt History
 Purpose: To track and store users' question attempt history for review and analysis.
