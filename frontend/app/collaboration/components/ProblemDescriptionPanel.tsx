@@ -8,6 +8,7 @@ type Props = {
   question: MatchQuestion | null
   loading: boolean
   error?: string | null
+  fullWidth?: boolean
 }
 
 const toExampleText = (value: unknown): string => {
@@ -76,14 +77,14 @@ const normalizeExamples = (examples: MatchQuestion["examples"]): NormalizedExamp
   }, [])
 }
 
-export default function ProblemDescriptionPanel({ question, loading, error }: Props) {
+export default function ProblemDescriptionPanel({ question, loading, error, fullWidth = false}: Props) {
   const normalizedExamples = normalizeExamples(question?.examples ?? null)
   const constraints = Array.isArray(question?.constraints) ? question?.constraints : []
   const descriptionImages = Array.isArray(question?.descriptionImages) ? question.descriptionImages : []
   const [showSolution, setShowSolution] = useState(false)
 
   return (
-    <div className="w-1/2 bg-slate-800 p-8 border-r overflow-auto text-white">
+    <div className={`${fullWidth? "w-full" : "w-1/2"} bg-slate-800 p-8 border-r overflow-auto text-white`}>
       {loading ? (
         <div className="text-lg font-medium text-blue-200">Loading question...</div>
       ) : error ? (

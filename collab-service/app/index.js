@@ -2,10 +2,13 @@ import express from "express";
 import cors from "cors";
 import { createProxyMiddleware } from "http-proxy-middleware";
 import http from "http";
+import aiRoutes from "./routes/ai-routes.js";
 
 const app = express();
 app.use(cors({ origin: ["http://localhost:3000"], credentials: true }));
+app.use(express.json()); 
 app.get("/healthz", (_req, res) => res.json({ ok: true }));
+app.use("/ai", aiRoutes);
 
 const YW_HOST = process.env.YW_HOST || "127.0.0.1";
 const YW_PORT = Number(process.env.YW_PORT || 1234);
@@ -40,6 +43,7 @@ const PORT = Number(process.env.PORT || 3004);
 
 server.listen(PORT, () => {
   console.log(`Collab API (HTTP) on http://localhost:${PORT}`);
+  console.log(`Gemini AI route ready at http://localhost:${PORT}/ai`);
   console.log(`Proxying WS at ws://localhost:${PORT}/collab  ->  ${YW_TARGET}`);
 });
 

@@ -1,16 +1,49 @@
 // Real question service
 export interface Question {
-  id: string
+  id: number
   title: string
-  difficulty: "Easy" | "Medium" | "Hard"
-  topics: string[]
   description: string
-  language?: string
+  descriptionImages: string[]
+  constraints: string[]
+  examples: any
+  solution: string
+  difficulty: "Easy" | "Medium" | "Hard"
+  language?: string | null
+  topic: string
+  followUp?: string | null
+  createdAt?: string
 }
 
-const API_URL = process.env.NEXT_PUBLIC_API_GATEWAY_URL
+export interface QuestionListResponse {
+  questions: Question[]
+  totalCount: number
+  totalPages: number
+  currentPage: number
+}
 
-console.log("API_URL =", API_URL);
+export type QuestionPayload = {
+  title: string
+  description: string
+  descriptionImages?: string[]
+  constraints?: string[]
+  examples?: any
+  solution: string
+  difficulty: "Easy" | "Medium" | "Hard"
+  language?: string | null
+  topic: string
+  followUp?: string | null
+}
+
+export type QuestionUpdatePayload = Partial<QuestionPayload>
+
+const API_GATEWAY_URL = process.env.NEXT_PUBLIC_API_GATEWAY_URL?.replace(/\/$/, "")
+const QUESTION_SERVICE_URL = process.env.NEXT_PUBLIC_QUESTION_SERVICE_URL?.replace(/\/$/, "")
+
+if (!API_GATEWAY_URL && !QUESTION_SERVICE_URL) {
+  console.warn(
+    "Missing NEXT_PUBLIC_API_GATEWAY_URL and NEXT_PUBLIC_QUESTION_SERVICE_URL environment variables for question service requests",
+  )
+}
 
 function mapDifficulty(difficulty: string): "Easy" | "Medium" | "Hard" {
   const map: Record<string, "Easy" | "Medium" | "Hard"> = {
@@ -18,56 +51,110 @@ function mapDifficulty(difficulty: string): "Easy" | "Medium" | "Hard" {
     MEDIUM: "Medium",
     HARD: "Hard",
   }
-  return map[difficulty]
+
+  return map[difficulty] ?? "Easy"
 }
 
-function transformQuestion(q: any): Question {
+function toApiDifficulty(difficulty: string): "EASY" | "MEDIUM" | "HARD" {
+  const upper = difficulty.trim().toUpperCase()
+  if (upper !== "EASY" && upper !== "MEDIUM" && upper !== "HARD") {
+    throw new Error("Difficulty must be Easy, Medium or Hard")
+  }
+  return upper as "EASY" | "MEDIUM" | "HARD"
+}
+
+function transformQuestion(payload: any): Question {
   return {
-    id: String(q.id),
-    title: q.title,
-    difficulty: mapDifficulty(q.difficulty),
-    topics: q.topic ? [q.topic] : [],
-    description: q.description,
-    language: q.language,
+    id: Number(payload.id),
+    title: payload.title,
+    description: payload.description,
+    descriptionImages: Array.isArray(payload.descriptionImages) ? payload.descriptionImages : [],
+    constraints: Array.isArray(payload.constraints) ? payload.constraints : [],
+    examples: payload.examples ?? null,
+    solution: payload.solution,
+    difficulty: mapDifficulty(payload.difficulty),
+    language: payload.language ?? null,
+    topic: payload.topic,
+    followUp: payload.followUp ?? null,
+    createdAt: payload.createdAt ?? undefined,
   }
 }
 
-export async function getQuestions(page = 1, limit = 100): Promise<{
-  questions: Question[]
-  totalCount: number
-  totalPages: number
-  currentPage: number
-}> {
-  try {
-    const token = localStorage.getItem("auth_token")
-    const params = new URLSearchParams({ page: String(page), limit: String(limit) })
+function getAuthHeaders(): Record<string, string> {
+  if (typeof window === "undefined") return {}
+  const token = window.localStorage.getItem("auth_token")
+  return token ? { Authorization: `Bearer ${token}` } : {}
+}
 
-    const response = await fetch(`${process.env.NEXT_PUBLIC_API_GATEWAY_URL}/questions?${params}`, {
+function buildRequestPayload(input: QuestionPayload | QuestionUpdatePayload): Record<string, unknown> {
+  const payload: Record<string, unknown> = {}
+
+  if (input.title !== undefined) payload.title = input.title
+  if (input.description !== undefined) payload.description = input.description
+  if (input.solution !== undefined) payload.solution = input.solution
+  if (input.difficulty !== undefined) payload.difficulty = toApiDifficulty(input.difficulty)
+  if (input.topic !== undefined) payload.topic = input.topic
+  if (input.language !== undefined) payload.language = input.language ?? null
+  if (input.followUp !== undefined) payload.followUp = input.followUp ?? null
+  if (input.descriptionImages !== undefined) payload.descriptionImages = input.descriptionImages
+  if (input.constraints !== undefined) payload.constraints = input.constraints
+  if (input.examples !== undefined) payload.examples = input.examples ?? null
+
+  return payload
+}
+
+async function parseResponse(response: Response) {
+  const text = await response.text()
+  if (!text) return null
+  try {
+    return JSON.parse(text)
+  } catch (error) {
+    return text
+  }
+}
+
+function buildApiUrl(path: string): string {
+  if (API_GATEWAY_URL && API_GATEWAY_URL.length > 0) {
+    return `${API_GATEWAY_URL}${path}`
+  }
+  if (QUESTION_SERVICE_URL && QUESTION_SERVICE_URL.length > 0) {
+    return `${QUESTION_SERVICE_URL}${path}`
+  }
+  throw new Error("Question service URL is not configured")
+}
+
+function ensureBaseUrl(): string {
+  if (API_GATEWAY_URL && API_GATEWAY_URL.length > 0) {
+    return API_GATEWAY_URL
+  }
+  if (QUESTION_SERVICE_URL && QUESTION_SERVICE_URL.length > 0) {
+    return QUESTION_SERVICE_URL
+  }
+  throw new Error("Question service URL is not configured")
+}
+
+export async function getQuestion(id: string): Promise<Question | null> {
+  try {
+    const response = await fetch(buildApiUrl(`/questions/${id}`), {
       headers: {
-        ...(token && { Authorization: `Bearer ${token}` }),
+        ...getAuthHeaders(),
       },
     })
 
     if (!response.ok) {
-      throw new Error("Failed to fetch questions")
+      if (response.status === 404) {
+        return null
+      }
+      throw new Error("Failed to fetch question")
     }
 
     const data = await response.json()
-
-    const questions = data.questions.map(transformQuestion)
-
-    return {
-      questions,
-      totalCount: data.totalCount,
-      totalPages: data.totalPages,
-      currentPage: data.currentPage,
-    }
+    return transformQuestion(data)
   } catch (error) {
-    console.error("Error fetching questions:", error)
+    console.error("Error fetching question:", error)
     throw error
   }
 }
-
 // export async function getQuestions(filters?: {
 //   difficulty?: string
 //   search?: string
@@ -109,14 +196,100 @@ export async function getQuestions(page = 1, limit = 100): Promise<{
 //   }
 // }
 
-// export async function getQuestion(id: string): Promise<Question | null> {
-//   try {
-//     const questions = await getQuestions()
-//     const question = questions.find(q => q.id === id)
-//     return question || null
-//   } catch (error) {
-//     console.error("Error fetching question:", error)
-//     throw error
-//   }
-// }
+export async function getQuestions(params?: {
+  page?: number
+  limit?: number
+  search?: string
+  difficulty?: string
+  topic?: string
+}): Promise<QuestionListResponse> {
+  const baseUrl = ensureBaseUrl()
+  const searchParams = new URLSearchParams()
+
+  const page = params?.page ?? 1
+  const limit = params?.limit ?? 20
+
+  searchParams.set("page", String(page))
+  searchParams.set("limit", String(limit))
+
+  if (params?.search) searchParams.set("search", params.search)
+  if (params?.topic) searchParams.set("topic", params.topic)
+  if (params?.difficulty) searchParams.set("difficulty", params.difficulty)
+
+  const response = await fetch(`${baseUrl}/questions?${searchParams}`, {
+    headers: {
+      ...getAuthHeaders(),
+    },
+  })
+
+  if (!response.ok) {
+    const body = await parseResponse(response)
+    console.error("Failed to fetch questions", body)
+    throw new Error(typeof body === "string" ? body : body?.error ?? "Failed to fetch questions")
+  }
+
+  const payload = await response.json()
+
+  return {
+    questions: Array.isArray(payload.questions) ? payload.questions.map(transformQuestion) : [],
+    totalCount: payload.totalCount ?? 0,
+    totalPages: payload.totalPages ?? 1,
+    currentPage: payload.currentPage ?? page,
+  }
+}
+
+export async function createQuestion(input: QuestionPayload): Promise<Question> {
+  const baseUrl = ensureBaseUrl()
+  const response = await fetch(`${baseUrl}/questions`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      ...getAuthHeaders(),
+    },
+    body: JSON.stringify(buildRequestPayload(input)),
+  })
+
+  if (!response.ok) {
+    const body = await parseResponse(response)
+    throw new Error(typeof body === "string" ? body : body?.error ?? "Failed to create question")
+  }
+
+  const payload = await response.json()
+  return transformQuestion(payload)
+}
+
+export async function updateQuestion(id: number, updates: QuestionUpdatePayload): Promise<Question> {
+  const baseUrl = ensureBaseUrl()
+  const response = await fetch(`${baseUrl}/questions/${id}`, {
+    method: "PATCH",
+    headers: {
+      "Content-Type": "application/json",
+      ...getAuthHeaders(),
+    },
+    body: JSON.stringify(buildRequestPayload(updates)),
+  })
+
+  if (!response.ok) {
+    const body = await parseResponse(response)
+    throw new Error(typeof body === "string" ? body : body?.error ?? "Failed to update question")
+  }
+
+  const payload = await response.json()
+  return transformQuestion(payload)
+}
+
+export async function deleteQuestion(id: number): Promise<void> {
+  const baseUrl = ensureBaseUrl()
+  const response = await fetch(`${baseUrl}/questions/${id}`, {
+    method: "DELETE",
+    headers: {
+      ...getAuthHeaders(),
+    },
+  })
+
+  if (!response.ok) {
+    const body = await parseResponse(response)
+    throw new Error(typeof body === "string" ? body : body?.error ?? "Failed to delete question")
+  }
+}
 

@@ -2,8 +2,9 @@
 
 import Link from "next/link"
 import { usePathname } from "next/navigation"
-import { Clock, Folder, User } from "lucide-react"
+import { Clock, Folder, User, ShieldCheck } from "lucide-react"
 import { ThemeToggle } from "./ThemeToggle"
+import { useAuth } from "../../contexts/auth-context"
 
 const navItems = [
   { href: "/matching", label: "Match", icon: User },
@@ -13,6 +14,10 @@ const navItems = [
 
 export function AppHeader() {
   const pathname = usePathname()
+  const { isAdmin } = useAuth()
+  const navItemsToRender = isAdmin
+    ? [...navItems, { href: "/admin", label: "Admin", icon: ShieldCheck }]
+    : navItems
 
   return (
     <header className="bg-blue-100 dark:bg-gray-800 px-6 py-4 transition-colors">
@@ -25,7 +30,7 @@ export function AppHeader() {
           </Link>
 
           <nav className="flex items-center gap-4">
-            {navItems.map(({ href, label, icon: Icon }) => {
+            {navItemsToRender.map(({ href, label, icon: Icon }) => {
               const isActive = pathname === href || pathname.startsWith(`${href}/`)
               return (
                 <Link

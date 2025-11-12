@@ -19,6 +19,8 @@ const MOCK_USERS: User[] = [
   { id: "2", email: "user@example.com", username: "John Doe", isAdmin: false, emailConfirmedAt: new Date().toISOString() },
 ]
 
+const MOCK_ADMIN_CODE = "ADMIN"
+
 export async function login(email: string, password: string): Promise<AuthResponse> {
   await new Promise((resolve) => setTimeout(resolve, 1000))
 
@@ -33,7 +35,7 @@ export async function login(email: string, password: string): Promise<AuthRespon
   }
 }
 
-export async function signup(username: string, email: string, password: string): Promise<AuthResponse> {
+export async function signup(username: string, email: string, password: string, adminCode?: string): Promise<AuthResponse> {
   await new Promise((resolve) => setTimeout(resolve, 1000))
 
   if (MOCK_USERS.find((u) => u.email === email)) {
@@ -44,7 +46,7 @@ export async function signup(username: string, email: string, password: string):
     id: `${Date.now()}`,
     email,
     username,
-    isAdmin: false,
+    isAdmin: adminCode?.trim() === MOCK_ADMIN_CODE,
     emailConfirmedAt: null,
   }
 

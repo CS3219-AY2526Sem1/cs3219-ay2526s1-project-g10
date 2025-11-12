@@ -16,7 +16,13 @@ export default function QuestionsPage() {
     const fetchData = async () => {
       try {
         setLoading(true)
-        const data = await getQuestions(currentPage, 50)
+        const difficultyFilter = selectedDifficulty !== "all" ? selectedDifficulty : undefined
+        const data = await getQuestions({
+          page: currentPage,
+          limit: 50,
+          search: searchQuery || undefined,
+          difficulty: difficultyFilter,
+        })
         setQuestions(data.questions)
         setTotalPages(data.totalPages)
       } catch (error) {
@@ -26,7 +32,7 @@ export default function QuestionsPage() {
       }
     }
     fetchData()
-  }, [currentPage])
+  }, [currentPage, searchQuery, selectedDifficulty])
 
   const getDifficultyColor = (difficulty: string) => {
     switch (difficulty) {
@@ -76,11 +82,29 @@ export default function QuestionsPage() {
                       </div>
                       <p className="text-sm text-gray-600 dark:text-gray-300 mb-3">{question.description}</p>
                       <div className="flex flex-wrap gap-2">
-                        {question.topics.map((topic: string, idx: number) => (
-                          <span key={idx} className="inline-flex px-3 py-1 rounded-full text-xs bg-blue-50 text-blue-700 dark:bg-blue-900 dark:text-blue-200">
-                            {topic}{question.language ? ` • ${question.language}` : ""}
-                          </span>
-                        ))}
+                        {(() => {
+                          const topics = question.topic
+                            ? question.topic.split(/\s*,\s*/).filter((topic) => topic.length > 0)
+                            : []
+
+                          if (!topics.length) {
+                            return (
+                              <span className="inline-flex px-3 py-1 rounded-full text-xs bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-200">
+                                {question.language ?? "General"}
+                              </span>
+                            )
+                          }
+
+                          return topics.map((topic, idx) => (
+                            <span
+                              key={`${question.id}-${topic}-${idx}`}
+                              className="inline-flex px-3 py-1 rounded-full text-xs bg-blue-50 text-blue-700 dark:bg-blue-900 dark:text-blue-200"
+                            >
+                              {topic}
+                              {question.language ? ` • ${question.language}` : ""}
+                            </span>
+                          ))
+                        })()}
                       </div>
                     </div>
                   </div>

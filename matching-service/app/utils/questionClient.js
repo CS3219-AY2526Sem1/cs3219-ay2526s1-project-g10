@@ -1,11 +1,6 @@
-// import "dotenv/config";
+import "dotenv/config";
 
-// const QUESTION_SERVICE_URL = process.env.QUESTION_SERVICE_URL;
-
-const QUESTION_SERVICE_URL =
-  typeof window === "undefined"
-    ? process.env.QUESTION_SERVICE_URL // backend (matching-service)
-    : process.env.NEXT_PUBLIC_API_GATEWAY_URL; // frontend (browser)
+const QUESTION_SERVICE_URL = (process.env.QUESTION_SERVICE_URL || process.env.NEXT_PUBLIC_API_GATEWAY_URL || "http://question-service:3003").replace(/\/$/, "");
 
     
 export async function fetchRandomQuestion({ difficulty, topic }) {
@@ -18,7 +13,6 @@ export async function fetchRandomQuestion({ difficulty, topic }) {
   if (topic) {
     searchParams.set("topic", topic);
   }
-
   const endpoint = `${QUESTION_SERVICE_URL}/questions${searchParams.toString() ? `?${searchParams.toString()}` : ""}`;
 
   try {

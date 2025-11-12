@@ -1,5 +1,36 @@
 import supabase from "../../supabaseClient.js";
 
+export async function updateAuthAdminMetadata(userId, isAdmin) {
+  const { data: authUser, error: authFetchError } = await supabase.auth.admin.getUserById(userId);
+
+  if (authFetchError || !authUser?.user) {
+    throw new Error(authFetchError?.message ?? "Unable to retrieve auth user");
+  }
+
+  const existingMetadata = authUser.user.user_metadata ?? {};
+
+  if (existingMetadata.isAdmin === isAdmin) {
+    // Ensure role reflects admin status even if the boolean already matches
+    if ((existingMetadata.role === "admin") === isAdmin) {
+      return;
+    }
+  }
+
+  const updatedMetadata = {
+    ...existingMetadata,
+    isAdmin,
+    role: isAdmin ? "admin" : "user",
+  };
+
+  const { error: authUpdateError } = await supabase.auth.admin.updateUserById(userId, {
+    user_metadata: updatedMetadata,
+  });
+
+  if (authUpdateError) {
+    throw new Error(authUpdateError.message ?? "Failed to update auth metadata");
+  }
+}
+
 async function ensureUniqueUser(username, email, excludeId) {
   const filters = [];
   if (username) filters.push(`username.eq.${username}`);
@@ -36,7 +67,7 @@ export async function createUser(req, res) {
         email,
         password,
         email_confirm: true,
-        user_metadata: { username },
+        user_metadata: { username, isAdmin: false, role: "user" },
       });
 
       if (error || !data?.user) {
@@ -188,14 +219,30 @@ export async function updateUserPrivilege(req, res) {
         return res.status(404).json({ message: `User ${userId} not found` });
       }
 
+      const targetIsAdmin = isAdmin === true;
+
+      try {
+        await updateAuthAdminMetadata(userId, targetIsAdmin);
+      } catch (metadataError) {
+        console.error("Failed to update auth metadata", metadataError);
+        return res.status(500).json({ message: metadataError.message ?? "Failed to update auth metadata" });
+      }
+
       const { data: updatedUser, error: updateError } = await supabase
         .from("users")
-        .update({ isAdmin: isAdmin === true })
+        .update({ isAdmin: targetIsAdmin })
         .eq("id", userId)
         .select("id, email, username, isAdmin, createdAt")
         .single();
 
       if (updateError || !updatedUser) {
+        if (existingUser.isAdmin !== targetIsAdmin) {
+          try {
+            await updateAuthAdminMetadata(userId, existingUser.isAdmin === true);
+          } catch (revertError) {
+            console.error("Failed to revert auth metadata after DB update failure", revertError);
+          }
+        }
         return res.status(400).json({ message: updateError?.message ?? "Failed to update user privilege" });
       }
 
@@ -239,7 +286,7 @@ export function mapProfileToResponse(user, emailConfirmedAt) {
     id: user.id,
     username: user.username,
     email: user.email,
-    isAdmin: user.isAdmin,
+    isAdmin: user.isAdmin === true,
   createdAt: user.createdAt,
     emailConfirmedAt,
   };

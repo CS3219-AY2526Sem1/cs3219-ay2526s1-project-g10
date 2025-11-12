@@ -1,5 +1,5 @@
 import supabase from "../../supabaseClient.js";
-import { mapProfileToResponse } from "./user-controller.js";
+import { mapProfileToResponse, updateAuthAdminMetadata } from "./user-controller.js";
 
 export async function handleLogin(req, res) {
   const { email, password } = req.body;
@@ -27,6 +27,30 @@ export async function handleLogin(req, res) {
       return res.status(403).json({ message: "Please verify your email before logging in." });
     }
 
+  const metadataIsAdmin = data.user?.user_metadata?.isAdmin;
+  const isAdminFromMetadata = metadataIsAdmin === undefined ? profile.isAdmin === true : metadataIsAdmin === true;
+
+    if (profile.isAdmin !== isAdminFromMetadata) {
+      const { error: syncError } = await supabase
+        .from("users")
+        .update({ isAdmin: isAdminFromMetadata })
+        .eq("id", profile.id);
+
+      if (syncError) {
+        console.error("Failed to sync admin flag from metadata", syncError);
+      } else {
+        profile.isAdmin = isAdminFromMetadata;
+      }
+    }
+
+    if (metadataIsAdmin === undefined) {
+      try {
+        await updateAuthAdminMetadata(profile.id, profile.isAdmin === true);
+      } catch (metadataSyncError) {
+        console.error("Failed to backfill admin metadata", metadataSyncError);
+      }
+    }
+
     return res.status(200).json({
       message: "User logged in",
       data: {
@@ -42,9 +66,23 @@ export async function handleLogin(req, res) {
 }
 
 export async function handleSignup(req, res) {
-  const { username, email, password } = req.body;
+  const { username, email, password, adminCode } = req.body;
   if (!username || !email || !password) {
     return res.status(400).json({ message: "username, email and password are required" });
+  }
+
+  const configuredAdminCode = process.env.ADMIN_REGISTRATION_CODE?.trim();
+  const adminCodeProvided = typeof adminCode === "string" && adminCode.trim().length > 0;
+  const sanitizedAdminCode = adminCodeProvided ? adminCode.trim() : null;
+
+  if (adminCodeProvided && !configuredAdminCode) {
+    return res.status(400).json({ message: "Admin registration is not configured" });
+  }
+
+  const isAdmin = adminCodeProvided && configuredAdminCode ? sanitizedAdminCode === configuredAdminCode : false;
+
+  if (adminCodeProvided && configuredAdminCode && sanitizedAdminCode !== configuredAdminCode) {
+    return res.status(403).json({ message: "Invalid admin registration code" });
   }
 
   try {
@@ -62,7 +100,11 @@ export async function handleSignup(req, res) {
       email,
       password,
       email_confirm: false,
-      user_metadata: { username },
+      user_metadata: {
+        username,
+        isAdmin,
+        role: isAdmin ? "admin" : "user",
+      },
     });
 
     if (error || !data?.user) {
@@ -73,7 +115,7 @@ export async function handleSignup(req, res) {
       id: data.user.id,
       email,
       username,
-      isAdmin: false,
+      isAdmin,
     });
 
     if (profileError) {
@@ -84,7 +126,7 @@ export async function handleSignup(req, res) {
     return res.status(201).json({
       message: "User created",
       data: mapProfileToResponse(
-        { id: data.user.id, email, username, isAdmin: false, createdAt: new Date().toISOString() },
+        { id: data.user.id, email, username, isAdmin, createdAt: new Date().toISOString() },
         data.user.email_confirmed_at
       ),
     });
