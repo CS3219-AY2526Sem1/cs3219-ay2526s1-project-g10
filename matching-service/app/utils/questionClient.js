@@ -1,4 +1,6 @@
-const QUESTION_SERVICE_URL = process.env.QUESTION_SERVICE_URL || "http://question-service:3003";
+import "dotenv/config";
+
+const QUESTION_SERVICE_URL = process.env.QUESTION_SERVICE_URL;
 
 export async function fetchRandomQuestion({ difficulty, topic }) {
   const searchParams = new URLSearchParams();
