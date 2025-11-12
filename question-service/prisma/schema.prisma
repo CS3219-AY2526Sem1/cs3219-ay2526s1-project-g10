@@ -30,6 +30,7 @@ model QuestionAttempt {
   id          Int      @id @default(autoincrement())
   userId      String
   questionId  Int?
+  questionJson Json?
   attemptedAt DateTime @default(now())
   duration    Int?      // null if not completed
   status      AttemptStatus

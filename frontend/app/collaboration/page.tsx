@@ -168,6 +168,7 @@ const CollaborationPage = () => {
           const pendingAttempt = await createPendingAttempt({
             userId: currentUser.id,
             questionId: String(activeSession.question.id),
+            question: activeSession.question
             })
 
           setAttemptId(pendingAttempt.id); // update local state to pass to CollaborationEditor

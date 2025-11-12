@@ -74,7 +74,6 @@ export default function CollaborationEditor({ roomId, participants, onRequestLea
 
   useEffect(() => {
     if (!attemptId || storedAttemptId.current) return;
-      return;
     console.log("Got attempt id:", attemptId);
     storedAttemptId.current = attemptId; // Store the attemptId to avoid re-running
   }, [attemptId]);

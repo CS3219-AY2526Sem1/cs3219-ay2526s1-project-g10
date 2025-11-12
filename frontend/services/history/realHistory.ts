@@ -1,7 +1,11 @@
 // Real history service
+import {MatchQuestion} from "../matching";
+
 export interface Attempt {
   id: string
   questionTitle: string
+  questionId: string
+  questionJson?: MatchQuestion
   difficulty: "Easy" | "Medium" | "Hard"
   status: "Completed" | "PENDING"
   score: number
@@ -32,16 +36,21 @@ export async function getUserAttempts(userId: string): Promise<Attempt[]> {
 }
 
 export async function createPendingAttempt(attemptData: {
-  userId: string
-  questionId: string
+  userId: any;
+  questionId: string;
+  question: MatchQuestion
 }): Promise<Attempt> {
+  const safeQuestion = JSON.parse(JSON.stringify(attemptData.question));
   const payload = {
     userId: attemptData.userId,
     questionId: attemptData.questionId,
     solution: "",
     actions: {},
     attemptedAt: new Date().toISOString(),
+    questionJson: safeQuestion
   }
+
+  console.log("Creating pending attempt with payload:", payload);
 
   const response = await fetch(`${API_URL}/history`, {
     method: "POST",

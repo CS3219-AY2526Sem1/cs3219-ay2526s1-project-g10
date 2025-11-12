@@ -21,8 +21,7 @@ const AttemptDetailsDialog: React.FC<AttemptDetailsDialogProps> = ({ attempt, on
                 {/* Dialog Body + Submitted Code + Output */}
                 <div className="w-full p-6 space-y-6">
                     {/* Problem Description Panel */}
-                    console.log("Rendering ProblemDescriptionPanel with question:", question);
-                    <ProblemDescriptionPanel question={question} loading={false} error={null} />
+                    <ProblemDescriptionPanel question={question} loading={false} error={null} fullWidth />
 
                     {/* Submitted Code */}
                     <div>

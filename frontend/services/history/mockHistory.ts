@@ -1,6 +1,9 @@
 // Mock history service
+import {MatchQuestion} from "../matching";
+
 export interface Attempt {
   questionId: string
+  questionJson?: MatchQuestion
   id: string
   questionTitle: string
   difficulty: "Easy" | "Medium" | "Hard"

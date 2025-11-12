@@ -87,12 +87,12 @@ export default function AttemptHistoryPage() {
   };
 
   const getStatusColor = (status: string) => {
-    return status === "Completed" ? "bg-blue-100 text-blue-800" : "bg-orange-100 text-orange-800"
+    return status === "COMPLETED" ? "bg-blue-100 text-blue-800" : "bg-orange-100 text-orange-800"
   }
 
   const openAttemptDialog = async (attempt: Attempt) => {
-    const question = await getQuestion(attempt.questionId)
-    setSelectedQuestion(question)
+    if (!attempt.questionJson) return;
+    setSelectedQuestion(attempt.questionJson);
     setSelectedAttempt(attempt)
   }
 
