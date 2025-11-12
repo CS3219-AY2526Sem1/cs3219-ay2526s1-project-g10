@@ -7,11 +7,6 @@ import httpProxy from 'express-http-proxy';
 const app = express();
 app.use(cors());
 app.use(express.json());
-// Later to add routes to microservices here
-// /users -> port 3001
-// /match -> port 3002
-// /questions -> port 3003
-// /collab -> port 3004 
 
 // Rate Limiting - To prevent spam (100req/15min)
 const limiter = rateLimit({
@@ -42,9 +37,10 @@ function authenticateToken(req, res, next) {
 // Routing Traffic to Microservices
 app.use("/users", httpProxy(process.env.USER_SERVICE_URL));
 app.use("/match", httpProxy(process.env.MATCHING_SERVICE_URL));
-app.use("/questions", httpProxy(process.env.QUESTION_SERVICE_URL));
+app.use("/questions", httpProxy(process.env.QUESTION_SERVICE_URL, {
+    proxyReqPathResolver: (req) => `/questions${req.url}`
+}));
 app.use("/collab", httpProxy(process.env.COLLAB_SERVICE_URL));
-
   
 // Health Check Endpoint 
 app.get('/healthz', (req, res) => {
@@ -60,6 +56,6 @@ app.use((err, req, res, next) => {
     console.error(err.stack);
     res.status(500).json({ error: "Internal Gateway Error" });
 });
-  
+
 // Starting the server
 app.listen(8080, "0.0.0.0", () => console.log("API Gateway running on port 8080"));
