@@ -59,7 +59,63 @@ The User Service is responsible for managing user accounts, authentication, and 
 
 ### Custom Matching Rooms
 
-### AI Assisted Problem-Solving and Chatbot
+### AI Assisted Problem-Solving and Chatbot (Google Gemini Integration)
+
+The **AI-Assisted Problem-Solving Chatbot** enhances PeerPrep’s collaborative coding experience by integrating **Google Gemini**, an advanced large language model that provides intelligent hints, explanations, and debugging support in real time.  
+It allows users to ask contextual questions about coding problems while working together on solutions within the live collaboration editor.
+
+---
+
+#### **Core Responsibilities**
+
+- Integrate **Google Gemini API** for contextual, AI-powered problem-solving assistance
+- Process user queries using combined context: **problem description**, **current code**, and **user prompt**
+- Provide **concise, well-formatted explanations** (limited to ~1500 characters for readability)
+- Maintain a **floating chatbox UI** within the collaboration page for continuous interaction
+- Display helpful statuses such as _“Please wait... Gemini is working”_ while responses are generated
+- Gracefully handle downtime with a fallback message: _“⚠️ Gemini is unavailable right now”_
+
+#### **Integration Details**
+
+| Component                | File                                                   | Description                                  |
+| ------------------------ | ------------------------------------------------------ | -------------------------------------------- |
+| **Backend Route**        | `collab-service/app/routes/ai-routes.js`               | Forwards chat prompts to Google Gemini API   |
+| **Frontend Component**   | `frontend/collaboration/components/gemini-chatbot.tsx` | Floating chatbox that interacts with users   |
+| **Service Layer**        | `frontend/services/chatbot/aiService.ts`               | Sends question, code, and prompt to backend  |
+| **Environment Variable** | `.env`                                                 | Stores the Gemini API key for backend access |
+
+---
+
+#### **How It Works**
+
+1. The user clicks the **Gemini logo button** in the collaboration editor.
+2. The **floating AI Assistant chatbox** opens, showing previous message history.
+3. When the user sends a query (e.g., _“Can you give me a hint?”_), the following happens:
+   - Frontend sends a POST request to `/ai/chat` with:
+     ```json
+     {
+       "question": "Validate Sudoku board",
+       "code": "def isValidSudoku(board): ...",
+       "prompt": "Can you give me a hint?"
+     }
+     ```
+   - The backend (`ai-routes.js`) forwards this to:
+     ```
+     https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent
+     ```
+   - Gemini processes the query and returns a concise, formatted response.
+   - The response is displayed in the chatbox UI.
+4. If the API call fails, the message _“⚠️ Gemini is unavailable right now”_ is shown instead.
+
+---
+
+#### **Example Response**
+
+```json
+{
+  "reply": "You can use a Set to track duplicates in each row, column, and 3x3 sub-grid. Try iterating through the board and check if the number already exists before adding it."
+}
+
 
 ---
 
@@ -89,3 +145,4 @@ The User Service is responsible for managing user accounts, authentication, and 
 ## Screenshots
 
 ---
+```
