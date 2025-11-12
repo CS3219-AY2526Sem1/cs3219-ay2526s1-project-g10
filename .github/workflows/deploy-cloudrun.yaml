@@ -130,7 +130,7 @@ jobs:
           set -euxo pipefail
           EXTRA_FLAGS=""
           if [ -n "$VPC_CONNECTOR" ]; then
-            EXTRA_FLAGS="--vpc-connector=$VPC_CONNECTOR --vpc-egress=all-traffic"
+              EXTRA_FLAGS="--vpc-connector=$VPC_CONNECTOR --vpc-egress=private-ranges-only"
           fi
           SECRET_FLAGS="--set-secrets=SUPABASE_URL=SUPABASE_URL:latest,SUPABASE_SERVICE_ROLE_KEY=SUPABASE_SERVICE_ROLE_KEY:latest,ADMIN_REGISTRATION_CODE=ADMIN_REGISTRATION_CODE:latest"
           ENV_FLAGS=""
