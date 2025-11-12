@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useMemo, useRef, useState } from "react"
+import { Suspense, useEffect, useMemo, useRef, useState } from "react"
 import ProblemDescriptionPanel from "./components/ProblemDescriptionPanel"
 // import CollaborationEditor from "./components/CollaborationEditor"
 import dynamic from "next/dynamic"
@@ -19,9 +19,7 @@ const CollaborationEditor = dynamic(
     () => import("./components/CollaborationEditor"),
     { ssr: false }
 )
-
-
-const CollaborationPage = () => {
+function CollaborationPageContent() {
   const searchParams = useSearchParams()
   const roomId = searchParams.get("roomId")
   const setRoomId = useRoomStore((state) => state.setRoomId)
@@ -342,4 +340,10 @@ const CollaborationPage = () => {
   )
 }
 
-export default CollaborationPage
+export default function CollaborationPage() {
+  return (
+    <Suspense fallback={null}>
+      <CollaborationPageContent />
+    </Suspense>
+  )
+}

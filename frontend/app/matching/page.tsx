@@ -1,12 +1,12 @@
 "use client"
 
-import { useEffect, useRef, useState } from "react"
+import { Suspense, useEffect, useRef, useState } from "react"
 import { cancelMatching, findMatches, matchWithUser, type MatchResult, type MatchCriteria } from "../../services/matching"
 import { useRouter, useSearchParams } from "next/navigation"
 import { AppHeader } from "../../components/navigation/AppHeader"
 import { User, Users } from "lucide-react"
 
-export default function MatchPage() {
+function MatchPageContent() {
   //const [selectedLanguage, setSelectedLanguage] = useState<string | null>(null)
   const [selectedDifficulty, setSelectedDifficulty] = useState<string | null>(null)
   const [selectedTopic, setSelectedTopic] = useState<string | null>(null)
@@ -349,5 +349,13 @@ export default function MatchPage() {
         </div>
       </div>
     </div>
+  )
+}
+
+export default function MatchPage() {
+  return (
+    <Suspense fallback={null}>
+      <MatchPageContent />
+    </Suspense>
   )
 }

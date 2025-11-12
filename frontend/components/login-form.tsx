@@ -1,7 +1,7 @@
 "use client"
 
 import type React from "react"
-import { useState } from "react"
+import { Suspense, useState } from "react"
 import { isAxiosError } from "axios"
 import { Button } from "../components/ui/button"
 import { Input } from "../components/ui/input"
@@ -11,7 +11,7 @@ import { useRouter, useSearchParams } from "next/navigation"
 import { login } from "../services/auth"
 import { useAuth } from "../contexts/auth-context"
 
-export function LoginForm() {
+function LoginFormContent() {
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
   const [isLoading, setIsLoading] = useState(false)
@@ -126,5 +126,13 @@ export function LoginForm() {
         </div>
       </div>
     </div>
+  )
+}
+
+export function LoginForm() {
+  return (
+    <Suspense fallback={null}>
+      <LoginFormContent />
+    </Suspense>
   )
 }

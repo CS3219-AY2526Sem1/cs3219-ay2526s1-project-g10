@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useMemo, useRef, useState } from "react"
+import { Suspense, useEffect, useMemo, useRef, useState } from "react"
 import { usePathname, useRouter, useSearchParams } from "next/navigation"
 import { getActiveSession, leaveSession } from "../services/matching"
 import { useSessionStore } from "../store/useSessionStore"
@@ -9,7 +9,7 @@ import { useRoomStore } from "../store/useRoomStore"
 
 const CHECK_INTERVAL_MS = 7000
 
-export function SessionWatcher() {
+function SessionWatcherContent() {
   const pathname = usePathname()
   const searchParams = useSearchParams()
   const router = useRouter()
@@ -187,5 +187,13 @@ export function SessionWatcher() {
         </div>
       )}
     </>
+  )
+}
+
+export function SessionWatcher() {
+  return (
+    <Suspense fallback={null}>
+      <SessionWatcherContent />
+    </Suspense>
   )
 }
