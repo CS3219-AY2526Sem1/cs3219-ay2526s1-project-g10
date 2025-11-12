@@ -32,12 +32,12 @@ const matchBase: string = readRuntimeEnv("NEXT_PUBLIC_MATCH_API")
 
 export const userClient = axios.create({
   baseURL: stripTrailingSlash(userBase),
-  timeout: 5000,
+  timeout: 15000,
 });
 
 export const matchClient = axios.create({
   baseURL: stripTrailingSlash(matchBase),
-  timeout: 5000,
+  timeout: 15000,
 });
 
 // Common interceptors (JWT, request ID)
