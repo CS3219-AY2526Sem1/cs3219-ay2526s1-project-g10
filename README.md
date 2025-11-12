@@ -36,7 +36,7 @@ Users can create or join custom rooms to collaborate with friends.
 4. User selects difficulty and topic of choice, then sets a room password.
 5. User clicks `Create Room` button.
 6. Room code is displayed to the user.
-7. User is redirected to the collaboration page.
+7. User is redirected to the custom room collaboration page.
 
 **Joining a Custom Room:**
 1. User navigates to the matching page.
@@ -44,7 +44,7 @@ Users can create or join custom rooms to collaborate with friends.
 3. User clicks `Join Room` button.
 4. User enters room code and password.
 5. User clicks `Join Room` button.
-6. User is redirected to the collaboration page.
+6. User is redirected to the custom room collaboration page.
 
 ### AI Assisted Problem-Solving and Chatbot
 
