@@ -49,6 +49,13 @@ PeerPrep is a web-based platform that allows users to solve coding problems with
 5. The service exposes RESTful APIs for interaction with other services and the frontend.
 6. The service uses a PostgreSQL database to store question data and attempt logs.
 
+**Query patterns:**
+  - Filter query by difficulty and topic (GET /questions?difficulty=&topic=)
+  - Use conditional filter and return question that match the difficulty/topic specified 
+  - Pick a random question from the filtered set 
+  - Pagination 
+  - Paged retrieval of qns(100 per page) (GET /questions)
+
 **APIs (examples):**
 - `POST /questions` - Create a new coding question (Admin only)
 - `GET /questions` - Retrieve a list of all coding questions
@@ -58,12 +65,25 @@ PeerPrep is a web-based platform that allows users to solve coding problems with
 - `DELETE /questions/{questionId}` - Delete a specific coding question (Admin only)
 - `PATCH /questions/{questionId}` - Partially update a specific coding question (Admin only)
 
+**Scaling and Design considerations**
+*API Design (REST)*
+  - Easy to extend to other services such as /questions/:id for specific question
+*Error handling*
+  - If query fails, exceptions are gracefully handled and return standard 500 responses 
+  - If no questions match criteria, ("No questions found matching the criteria")
+*DB Scalability(future possibilities)*
+  - Supabase supports horizontal scaling and read replicas so as num of questions grows it can distribute read queries across replicas to reduce loads 
+  - Future possibility as DB grows(Sharding - splitting data by category into multiple db, running on different servers)
+  - Caching -> Frequently accessed questions (e.g., popular ones or easy level) can be cached in Redis to further reduce database load
+
 **Integration with user service:**
 - The question service will interact with the user service to verify user identities and roles 
   when performing operations that require authentication or authorization.
 - Requests to display data include JWT in the Authorization header for user verification.
 - Backend for both services will validate the JWT to ensure secure communication.
 - If validation is successful, question / attempts can be processed accordingly.
+
+**Integration with matching service**
 
 ### Matching Service
 
