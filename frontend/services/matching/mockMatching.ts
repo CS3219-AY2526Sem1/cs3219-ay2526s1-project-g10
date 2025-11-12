@@ -57,7 +57,6 @@ export async function matchWithUser(userId: string): Promise<string> {
   difficulty: "EASY",
   topic: "Array",
     question: MOCK_QUESTION,
-    attemptId: null,
     createdAt: Date.now(),
   }
   return mockRoomId

@@ -7,7 +7,7 @@ export interface Attempt {
   questionId: string
   questionJson?: MatchQuestion
   difficulty: "Easy" | "Medium" | "Hard"
-  status: "Completed" | "PENDING"
+  status: "COMPLETED" | "PENDING"
   score: number
   date: string
   duration: string
@@ -50,8 +50,6 @@ export async function createPendingAttempt(attemptData: {
     questionJson: safeQuestion
   }
 
-  console.log("Creating pending attempt with payload:", payload);
-
   const response = await fetch(`${API_URL}/history`, {
     method: "POST",
     headers: {
@@ -63,24 +61,6 @@ export async function createPendingAttempt(attemptData: {
 
   if (!response.ok) {
     throw new Error("Failed to create pending attempt")
-  }
-
-  return response.json()
-}
-
-// Update attempt
-export async function updateAttemptDuration(attemptId: string, duration: string): Promise<Attempt> {
-  const response = await fetch(`${API_URL}/history/${attemptId}/duration`, {
-    method: "PATCH",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${localStorage.getItem("auth_token")}`,
-    },
-    body: JSON.stringify({ duration }),
-  })
-
-  if (!response.ok) {
-    throw new Error("Failed to update attempt duration")
   }
 
   return response.json()

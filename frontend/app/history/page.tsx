@@ -46,8 +46,6 @@ export default function AttemptHistoryPage() {
     fetchData()
   }, [user])
 
-
-
   const filteredAttempts = attempts.filter((attempt) =>
     attempt.questionTitle.toLowerCase().includes(searchQuery.toLowerCase()),
   )

@@ -21,7 +21,6 @@ import { CODE_VERSIONS } from "../../../lib/constants"
 import { ChevronDownIcon, Play, Loader2, MessageCircle, X, Send, LogOut } from "lucide-react"
 import { Button } from "../../../components/ui/button"
 import {updateAttempt} from "../../../services/history/realHistory";
-import {useSessionStore} from "../../../store/useSessionStore";
 
 type Participant = {
   name: string
@@ -50,7 +49,6 @@ const DEFAULT_COLLAB_WS = "ws://localhost:3004/collab"
 
 
 export default function CollaborationEditor({ roomId, participants, onRequestLeave, leaving, attemptId }: CollaborationEditorProps) {
-  console.log("Rendering CollaborationEditor for attemptId:", attemptId )
   const [language, setLanguage] = useState<string>("python")
   const [codeRunning, setCodeRunning] = useState<boolean>(false);
   const [codeOutput, setCodeOutput] = useState<string | null>(null);
@@ -70,11 +68,9 @@ export default function CollaborationEditor({ roomId, participants, onRequestLea
   const [chatMessages, setChatMessages] = useState<{ id: number; text: string; ts: number }[]>([])
   const chatEndRef = useRef<HTMLDivElement | null>(null)
   const storedAttemptId = useRef<String | null>(null);
-  // const attemptId = useSessionStore((state) => state.session?.attemptId)
 
   useEffect(() => {
     if (!attemptId || storedAttemptId.current) return;
-    console.log("Got attempt id:", attemptId);
     storedAttemptId.current = attemptId; // Store the attemptId to avoid re-running
   }, [attemptId]);
 
@@ -117,10 +113,8 @@ export default function CollaborationEditor({ roomId, participants, onRequestLea
 
     // Update attempt whenever output changes
     try {
-      console.log("Updating attempt after code run, attemptId:", attemptId)
       if(storedAttemptId.current || attemptId) {
         const attemptToUpdateId = storedAttemptId.current ? storedAttemptId.current.toString() : attemptId!;
-        console.log("call updateAttempt with id:", attemptToUpdateId)
         await updateAttempt(attemptToUpdateId, {
           code: editorRef.current ? editorRef.current.getValue() : "",
           duration: "0",
@@ -243,24 +237,6 @@ export default function CollaborationEditor({ roomId, participants, onRequestLea
         yOutputRef.current?.delete(0, yOutputRef.current.length)
         yOutputRef.current?.insert(0, `Error (code ${run_code}):\n${run_stderr || run_output}`)
       }
-
-
-      // // Update attempt with code, output and
-      // try {
-      //   console.log("Updating attempt after code run, attemptId:", attemptId)
-      //   if(storedAttemptId.current || attemptId) {
-      //     const attemptToUpdateId = storedAttemptId.current ? storedAttemptId.current.toString() : attemptId!;
-      //     console.log("call updateAttempt with id:", attemptToUpdateId)
-      //     await updateAttempt(attemptToUpdateId, {
-      //       code: code,
-      //       duration: "0",
-      //       output: run_output + (run_stderr ? `\n${run_stderr}` : ""),
-      //       status: "COMPLETED",
-      //     })
-      //   }
-      // } catch (historyError) {
-      //   console.error("Failed to update attempt after code run", historyError)
-      // }
 
     } catch (error) {
       alert("Error running code")

@@ -1,7 +1,6 @@
 import React from "react"
 import { Attempt } from "../../../services/history/realHistory";
 import ProblemDescriptionPanel from "../../collaboration/components/ProblemDescriptionPanel";
-import {getQuestion} from "../../../services/question";
 
 interface AttemptDetailsDialogProps {
     attempt: Attempt;
