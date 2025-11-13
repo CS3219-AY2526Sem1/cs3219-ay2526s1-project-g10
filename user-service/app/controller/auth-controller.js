@@ -96,38 +96,52 @@ export async function handleSignup(req, res) {
       return res.status(409).json({ message: "username or email already exists" });
     }
 
-    const { data, error } = await supabase.auth.admin.createUser({
+    const frontendOrigin = process.env.FRONTEND_ORIGIN?.replace(/\/$/, "")
+    const emailRedirectTo =
+      process.env.EMAIL_CONFIRM_REDIRECT
+      ?? (frontendOrigin ? `${frontendOrigin}/auth/callback?type=signup` : undefined)
+      ?? "http://localhost:3000/auth/callback?type=signup";
+
+    const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
       email,
       password,
-      email_confirm: false,
-      user_metadata: {
-        username,
-        isAdmin,
-        role: isAdmin ? "admin" : "user",
+      options: {
+        emailRedirectTo,
+        data: {
+          username,
+          isAdmin,
+          role: isAdmin ? "admin" : "user",
+        },
       },
     });
 
-    if (error || !data?.user) {
-      return res.status(400).json({ message: error?.message ?? "Failed to create user" });
+    if (signUpError || !signUpData?.user) {
+      return res.status(400).json({ message: signUpError?.message ?? "Failed to create user" });
     }
 
-    const { error: profileError } = await supabase.from("users").insert({
-      id: data.user.id,
-      email,
-      username,
-      isAdmin,
-    });
+    const createdAt = new Date().toISOString();
+    const insertResult = await supabase
+      .from("users")
+      .insert({
+        id: signUpData.user.id,
+        email,
+        username,
+        isAdmin,
+        createdAt,
+      })
+      .select("id")
+      .single();
 
-    if (profileError) {
-      await supabase.auth.admin.deleteUser(data.user.id);
-      return res.status(400).json({ message: profileError.message ?? "Failed to create user profile" });
+    if (insertResult.error) {
+      await supabase.auth.admin.deleteUser(signUpData.user.id);
+      return res.status(400).json({ message: insertResult.error.message ?? "Failed to create user profile" });
     }
 
     return res.status(201).json({
       message: "User created",
       data: mapProfileToResponse(
-        { id: data.user.id, email, username, isAdmin, createdAt: new Date().toISOString() },
-        data.user.email_confirmed_at
+        { id: signUpData.user.id, email, username, isAdmin, createdAt },
+        signUpData.user.email_confirmed_at
       ),
     });
   } catch (err) {
