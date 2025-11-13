@@ -1,6 +1,8 @@
 import supabase from "../../supabaseClient.js";
 import { mapProfileToResponse, updateAuthAdminMetadata } from "./user-controller.js";
 
+const DEFAULT_FRONTEND_ORIGIN = "https://frontend-j4i3ud5cyq-as.a.run.app";
+
 export async function handleLogin(req, res) {
   const { email, password } = req.body;
   if (!email || !password) {
@@ -96,11 +98,13 @@ export async function handleSignup(req, res) {
       return res.status(409).json({ message: "username or email already exists" });
     }
 
-    const frontendOrigin = process.env.FRONTEND_ORIGIN?.replace(/\/$/, "")
-    const emailRedirectTo =
-      process.env.EMAIL_CONFIRM_REDIRECT
-      ?? (frontendOrigin ? `${frontendOrigin}/auth/callback?type=signup` : undefined)
-      ?? "http://localhost:3000/auth/callback?type=signup";
+    const explicitRedirect = process.env.EMAIL_CONFIRM_REDIRECT?.trim();
+    const configuredOrigin = process.env.FRONTEND_ORIGIN?.trim();
+    const fallbackOrigin = (process.env.NODE_ENV === "production" ? DEFAULT_FRONTEND_ORIGIN : "http://localhost:3000");
+    const resolvedOrigin = (configuredOrigin && configuredOrigin.length > 0 ? configuredOrigin : fallbackOrigin).replace(/\/$/, "");
+    const emailRedirectTo = explicitRedirect && explicitRedirect.length > 0
+      ? explicitRedirect
+      : `${resolvedOrigin}/auth/callback?type=signup`;
 
     const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
       email,
