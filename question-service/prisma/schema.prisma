@@ -1,0 +1,69 @@
+generator client {
+  provider      = "prisma-client-js"
+  output        = "../generated/prisma"
+  binaryTargets = ["native", "linux-musl-openssl-3.0.x", "linux-musl-arm64-openssl-3.0.x"]
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Question {
+  id                Int        @id @default(autoincrement())
+  title             String
+  description       String
+  descriptionImages String[]   @default([])
+  constraints       String[]   @default([])
+  examples          Json?
+  solution          String
+  difficulty        Difficulty
+  language          String?
+  topic             String
+  followUp          String?
+  createdAt         DateTime   @default(now())
+
+  //relation
+  attempts          QuestionAttempt[]
+}
+model QuestionAttempt {
+  id          Int      @id @default(autoincrement())
+  userId      String
+  questionId  Int?
+  questionJson Json?
+  attemptedAt DateTime @default(now())
+  status      AttemptStatus
+  code        String? // null if not attempted
+  output      String?
+
+  //relation
+  user      users     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  question  Question?  @relation(fields: [questionId], references: [id], onDelete: Cascade)
+  @@index([userId])
+  @@index([questionId])
+  @@map("question_attempts")
+}
+
+enum AttemptStatus {
+  COMPLETED
+  PENDING
+}
+
+model users {
+  id         String   @id(map: "User_pkey")
+  username   String   @unique(map: "User_username_key")
+  email      String   @unique(map: "User_email_key")
+  password   String?
+  createdAt  DateTime @default(now())
+  isAdmin    Boolean  @default(false)
+  supabaseId String?  @unique
+
+  //relation
+  questionAttempts QuestionAttempt[]
+}
+
+enum Difficulty {
+  EASY
+  MEDIUM
+  HARD
+}

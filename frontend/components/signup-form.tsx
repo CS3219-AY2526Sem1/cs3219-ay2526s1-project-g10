@@ -1,0 +1,141 @@
+"use client"
+
+import type React from "react"
+import { useState } from "react"
+import { isAxiosError } from "axios"
+import { Button } from "../components/ui/button"
+import { Input } from "../components/ui/input"
+import { Label } from "../components/ui/label"
+import Link from "next/link"
+import { useRouter } from "next/navigation"
+import { signup } from "../services/auth"
+import { useAuth } from "../contexts/auth-context"
+
+export function SignupForm() {
+  const [name, setName] = useState("")
+  const [email, setEmail] = useState("")
+  const [password, setPassword] = useState("")
+  const [adminCode, setAdminCode] = useState("")
+  const [isLoading, setIsLoading] = useState(false)
+  const [error, setError] = useState("")
+  const router = useRouter()
+  const { refreshUser } = useAuth()
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setIsLoading(true)
+    setError("")
+
+    try {
+  const trimmedAdminCode = adminCode.trim()
+  const { user, token } = await signup(name, email, password, trimmedAdminCode || undefined)
+
+      if (!user.emailConfirmedAt) {
+        router.push(`/user/verify-email?email=${encodeURIComponent(email)}`)
+        return
+      }
+
+      if (token) {
+        localStorage.setItem("auth_token", token)
+        localStorage.setItem("user", JSON.stringify(user))
+        await refreshUser()
+      }
+
+  router.replace("/matching")
+    } catch (err) {
+      if (isAxiosError(err)) {
+        const message = (err.response?.data as { message?: string } | undefined)?.message ?? err.message
+        setError(message || "Failed to create account")
+      } else if (err instanceof Error) {
+        setError(err.message)
+      } else {
+        setError("Failed to create account")
+      }
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  return (
+    <div className="w-full max-w-md rounded-lg bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 p-6 shadow-sm transition-colors">
+      <div className="flex flex-col space-y-1.5 p-6">
+        <h3 className="text-2xl font-semibold tracking-tight text-balance">Create an account</h3>
+        <p className="text-sm text-muted-foreground dark:text-gray-100">Enter your information to create your account</p>
+      </div>
+      <div className="p-6 pt-0">
+        <form onSubmit={handleSubmit} className="space-y-4">
+          {error && <div className="rounded-lg bg-red-50 p-3 text-sm text-red-800">{error}</div>}
+          <div className="space-y-2">
+            <Label htmlFor="name">Username</Label>
+            <Input
+              id="name"
+              type="text"
+              placeholder="John Doe"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              required
+              autoComplete="name"
+              disabled={isLoading}
+              className="dark:border-gray-600 dark:text-gray-100"
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="email">Email</Label>
+            <Input
+              id="email"
+              type="email"
+              placeholder="name@example.com"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              required
+              autoComplete="email"
+              disabled={isLoading}
+              className="dark:border-gray-600 dark:text-gray-100"
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="password">Password</Label>
+            <Input
+              id="password"
+              type="password"
+              placeholder="Create a password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              required
+              autoComplete="new-password"
+              disabled={isLoading}
+              minLength={8}
+              className="dark:border-gray-600 dark:text-gray-100"
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="adminCode">Admin access code (optional)</Label>
+            <Input
+              id="adminCode"
+              type="text"
+              placeholder="Enter admin code if provided"
+              value={adminCode}
+              onChange={(e) => setAdminCode(e.target.value)}
+              disabled={isLoading}
+              className="dark:border-gray-600 dark:text-gray-100"
+            />
+            <p className="text-xs text-muted-foreground dark:text-gray-300">
+              Leave blank to create a regular account. Use the admin access code shared by the team to register as an admin.
+            </p>
+          </div>
+          <Button type="submit" className="w-full" disabled={isLoading}>
+            {isLoading ? "Creating account..." : "Create account"}
+          </Button>
+        </form>
+      </div>
+      <div className="flex items-center p-6 pt-0">
+        <div className="text-sm text-center text-muted-foreground w-full dark:text-gray-300">
+          Already have an account?{" "}
+          <Link href="/user/login" className="font-medium text-foreground hover:underline">
+            Sign in
+          </Link>
+        </div>
+      </div>
+    </div>
+  )
+}

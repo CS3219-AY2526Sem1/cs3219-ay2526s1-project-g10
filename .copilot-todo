@@ -1,0 +1,4 @@
+- [x] Assess current deployment setup and existing workflows
+- [x] Implement direct-to-GCP deployment workflow (build & deploy services + gateway)
+- [x] Update environment configs to use gateway/service URLs suitable for Cloud Run
+- [x] Document deployment steps and required secrets/vars

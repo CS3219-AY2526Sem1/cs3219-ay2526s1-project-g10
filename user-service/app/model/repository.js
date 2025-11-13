@@ -1,0 +1,1 @@
+export {}; // Prisma repository removed after migrating to Supabase-backed storage
