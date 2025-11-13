@@ -7,7 +7,9 @@ import { useSessionStore } from "../store/useSessionStore"
 import { useAuthStore } from "../store/useAuthStore"
 import { useRoomStore } from "../store/useRoomStore"
 
-const CHECK_INTERVAL_MS = 7000
+const DEFAULT_POLL_INTERVAL_MS = 15000
+const MAX_POLL_INTERVAL_MS = 60000
+const ERROR_COOLDOWN_MS = 120000
 
 function SessionWatcherContent() {
   const pathname = usePathname()
@@ -28,6 +30,7 @@ function SessionWatcherContent() {
   const [error, setError] = useState<string | null>(null)
   const [modalOpen, setModalOpen] = useState(false)
   const previousSessionRef = useRef(session)
+  const idleBackoffRef = useRef(0)
 
   const roomIdParam = useMemo(() => searchParams?.get("roomId") ?? null, [searchParams])
   const isCollaborationPage = pathname?.startsWith("/collaboration") ?? false
@@ -43,31 +46,52 @@ function SessionWatcherContent() {
       clearRoomId()
       setModalOpen(false)
       setError(null)
+      idleBackoffRef.current = 0
       return
     }
 
     let cancelled = false
-    let intervalId: number | undefined
+    let timeoutId: number | undefined
 
-    const fetchSession = async () => {
+    const maxBackoffSteps = Math.max(1, Math.floor(MAX_POLL_INTERVAL_MS / DEFAULT_POLL_INTERVAL_MS))
+
+    const resetBackoff = () => {
+      idleBackoffRef.current = 0
+    }
+
+    const currentBackoffDelay = () => {
+      const step = Math.max(1, Math.min(idleBackoffRef.current, maxBackoffSteps))
+      return Math.min(DEFAULT_POLL_INTERVAL_MS * step, MAX_POLL_INTERVAL_MS)
+    }
+
+    async function fetchSession() {
+      if (cancelled) {
+        return
+      }
+
       try {
         setChecking(true)
         const activeSession = await getActiveSession()
         if (cancelled) return
 
         if (activeSession) {
+          resetBackoff()
           setSession(activeSession)
           setError(null)
+          scheduleNext(DEFAULT_POLL_INTERVAL_MS)
         } else {
           clearSession()
           clearRoomId()
           setError(null)
+          idleBackoffRef.current = Math.min(idleBackoffRef.current + 1, maxBackoffSteps)
+          scheduleNext(currentBackoffDelay())
         }
       } catch (err) {
         if (cancelled) return
         console.error("Failed to check active session", err)
         const message = err instanceof Error ? err.message : "Failed to check active session"
         setError(message)
+        scheduleNext(ERROR_COOLDOWN_MS)
       } finally {
         if (!cancelled) {
           setChecking(false)
@@ -75,22 +99,37 @@ function SessionWatcherContent() {
       }
     }
 
-    void fetchSession()
-
-    intervalId = window.setInterval(fetchSession, CHECK_INTERVAL_MS)
+    function scheduleNext(delay: number) {
+      if (cancelled) {
+        return
+      }
+      if (timeoutId !== undefined) {
+        window.clearTimeout(timeoutId)
+      }
+      timeoutId = window.setTimeout(() => {
+        void fetchSession()
+      }, delay)
+    }
 
     const handleVisibility = () => {
       if (document.visibilityState === "visible") {
+        if (timeoutId !== undefined) {
+          window.clearTimeout(timeoutId)
+          timeoutId = undefined
+        }
+        resetBackoff()
         void fetchSession()
       }
     }
 
     document.addEventListener("visibilitychange", handleVisibility)
 
+    void fetchSession()
+
     return () => {
       cancelled = true
-      if (intervalId !== undefined) {
-        window.clearInterval(intervalId)
+      if (timeoutId !== undefined) {
+        window.clearTimeout(timeoutId)
       }
       document.removeEventListener("visibilitychange", handleVisibility)
     }
