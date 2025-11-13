@@ -20,22 +20,20 @@ const gatewayBase = stripTrailingSlash(resolveGatewayBase())
 const questionServiceOverride = getRuntimeEnv("NEXT_PUBLIC_QUESTION_SERVICE_URL")
 const questionServiceBase = questionServiceOverride ? stripTrailingSlash(questionServiceOverride) : undefined
 
-function resolveHistoryUrl(gatewayPath: string, questionServicePath: string): string {
-  if (gatewayBase && gatewayBase.length > 0) {
-    return `${gatewayBase}${gatewayPath}`
+const resolveHistoryBase = (): string => {
+  const base = questionServiceBase ?? gatewayBase
+  if (!base) {
+    throw new Error("History service URL is not configured")
   }
-  if (questionServiceBase && questionServiceBase.length > 0) {
-    return `${questionServiceBase}${questionServicePath}`
-  }
-  throw new Error("History service URL is not configured")
+  return `${base}/history`
 }
 
-function requireQuestionService(path: string): string {
-  const base = questionServiceBase ?? gatewayBase
-  if (!base || base.length === 0) {
-    throw new Error("Question service URL is not configured")
+const withAuth = (): Record<string, string> => {
+  if (typeof window === "undefined") {
+    return {}
   }
-  return `${base}${path}`
+  const token = window.localStorage.getItem("auth_token")
+  return token ? { Authorization: `Bearer ${token}` } : {}
 }
 
 export interface AdminAttempt extends Attempt {
@@ -43,10 +41,8 @@ export interface AdminAttempt extends Attempt {
 }
 
 export async function getUserAttempts(userId: string): Promise<Attempt[]> {
-  const response = await fetch(resolveHistoryUrl(`/users/${userId}/attempts`, `/history/user/${userId}`), {
-    headers: {
-      Authorization: `Bearer ${localStorage.getItem("auth_token")}`,
-    },
+  const response = await fetch(`${resolveHistoryBase()}/user/${userId}`, {
+    headers: withAuth(),
   })
 
   if (!response.ok) {
@@ -70,11 +66,11 @@ export async function createPendingAttempt(attemptData: {
     questionJson: safeQuestion,
   }
 
-  const response = await fetch(requireQuestionService("/history"), {
+  const response = await fetch(resolveHistoryBase(), {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
-      Authorization: `Bearer ${localStorage.getItem("auth_token")}`,
+      ...withAuth(),
     },
     body: JSON.stringify(payload),
   })
@@ -96,11 +92,11 @@ export async function updateAttempt(
     questionId: string
   }>,
 ): Promise<Attempt> {
-  const response = await fetch(requireQuestionService(`/history/${attemptId}`), {
+  const response = await fetch(`${resolveHistoryBase()}/${attemptId}`, {
     method: "PATCH",
     headers: {
       "Content-Type": "application/json",
-      Authorization: `Bearer ${localStorage.getItem("auth_token")}`,
+      ...withAuth(),
     },
     body: JSON.stringify(updateData),
   })
@@ -119,9 +115,7 @@ export async function getAllAttempts(): Promise<AdminAttempt[]> {
   }
 
   const response = await fetch(`${base}/admin/attempts`, {
-    headers: {
-      Authorization: `Bearer ${localStorage.getItem("auth_token")}`,
-    },
+    headers: withAuth(),
   })
 
   if (!response.ok) {

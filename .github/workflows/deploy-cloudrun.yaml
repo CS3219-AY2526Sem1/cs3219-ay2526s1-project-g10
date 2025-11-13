@@ -165,7 +165,8 @@ jobs:
             --service-account="$RUNTIME_SERVICE_ACCOUNT" \
             --allow-unauthenticated \
             --set-env-vars=USER_SERVICE_URL=$USER_SERVICE_URL \
-            --set-secrets=DATABASE_URL=DATABASE_URL:latest
+            --set-secrets=DATABASE_URL=DATABASE_URL:latest \
+            --clear-vpc-connector
 
           QUESTION_URL=$(gcloud run services describe question-service --region="${{ env.REGION }}" --format='value(status.url)')
           echo "QUESTION_SERVICE_URL=$QUESTION_URL" >> "$GITHUB_ENV"
