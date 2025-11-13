@@ -2,11 +2,12 @@
 
 import { useState, useEffect } from "react"
 import { Search, Menu, User, Folder, Clock, Edit2, LogOut, Check, X } from "lucide-react"
-import { getUserProfile, type UserProfile } from "../../../services/user"
+import { getUserProfile, updateUserProfile, type UserProfile } from "../../../services/user"
 import { useAuth } from "../../../contexts/auth-context"
 import { useRouter } from "next/navigation"
-import { createClient } from "@supabase/supabase-js"
 import { AppHeader } from "../../../components/navigation/AppHeader"
+
+export const dynamic = "force-dynamic"
 
 export default function ProfilePage() {
   const [profile, setProfile] = useState<UserProfile | null>(null)
@@ -29,7 +30,7 @@ export default function ProfilePage() {
           console.log("3. User email from auth context:", user.email)
 
       try {
-        const data = await getUserProfile(user.id)
+  const data = await getUserProfile(user.id)
         console.log("5. getUserProfile returned:", data)
         console.log("6. data.email:", data.email)
         setProfile(data)
@@ -57,24 +58,17 @@ export default function ProfilePage() {
     setMessage(null)
 
     try {
-      const supabase = createClient(
-        process.env.NEXT_PUBLIC_SUPABASE_URL!,
-        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-      )
-
-      const { error } = await supabase
-        .from("users")
-        .update({ username: username.trim() })
-        .eq("id", user.id)
-
-      if (error) throw error
-
-      setProfile((prev) => prev && { ...prev, username: username.trim() })
+      const updatedUser = await updateUserProfile(user.id, { username: username.trim() })
+      setProfile(updatedUser)
+      setUsername(updatedUser.username)
       setEditingField(null)
       setMessage({ type: "success", text: "Username updated successfully!" })
     } catch (err: any) {
-      console.error("Failed to update username:", err.message)
-      setMessage({ type: "error", text: "Failed to update username. Please try again." })
+      console.error("Failed to update username:", err?.message ?? err)
+      setMessage({
+        type: "error",
+        text: err?.message || "Failed to update username. Please try again.",
+      })
     } finally {
       setSaving(false)
     }
@@ -147,32 +141,24 @@ export default function ProfilePage() {
     setMessage(null)
 
     try {
-      const supabase = createClient(
-        process.env.NEXT_PUBLIC_SUPABASE_URL!,
-        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-      )
-
-      const { error: authError } = await supabase.auth.updateUser(
-        { email: email.trim() },
-        { emailRedirectTo: `${window.location.origin}/auth/callback?type=email_change` }
-      )
-      if (authError) throw authError
-
-      const { error: tableError } = await supabase
-        .from("users")
-        .update({ email: email.trim() })
-        .eq("id", user.id)
-      if (tableError) throw tableError
+      const updatedUser = await updateUserProfile(user.id, { email: email.trim() })
+      setProfile(updatedUser)
+      setEmail(updatedUser.email)
+      setEditingField(null)
+      setMessage({ type: "success", text: "Email updated successfully!" })
 
       await signOut()
 
       router.push("/user/verify-email?email=" + encodeURIComponent(email.trim()))
     } catch (err: any) {
-      console.error("Failed to update email:", err.message)
-      setMessage({ type: "error", text: err.message || "Failed to update email. Please try again." })
+      console.error("Failed to update email:", err?.message ?? err)
+      setMessage({
+        type: "error",
+        text: err?.message || "Failed to update email. Please try again.",
+      })
       setEmail(profile?.email || "")
-      setSaving(false)
     }
+    setSaving(false)
   }
 
 

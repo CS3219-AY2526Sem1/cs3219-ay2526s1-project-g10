@@ -1,50 +1,84 @@
 import express from "express";
 import cors from "cors";
-import { createProxyMiddleware } from "http-proxy-middleware";
 import http from "http";
+import { WebSocketServer } from "ws";
+import { setupWSConnection } from "y-websocket/bin/utils";
 import aiRoutes from "./routes/ai-routes.js";
 
 const app = express();
-app.use(cors({ origin: ["http://localhost:3000"], credentials: true }));
-app.use(express.json()); 
-app.get("/healthz", (_req, res) => res.json({ ok: true }));
-app.use("/ai", aiRoutes);
+const allowOrigins = process.env.COLLAB_ALLOWED_ORIGINS
+  ? process.env.COLLAB_ALLOWED_ORIGINS.split(",").map((origin) => origin.trim()).filter(Boolean)
+  : ["http://localhost:3000"];
 
-const YW_HOST = process.env.YW_HOST || "127.0.0.1";
-const YW_PORT = Number(process.env.YW_PORT || 1234);
-const YW_TARGET = `http://${YW_HOST}:${YW_PORT}`;
+app.use(
+  cors({
+    origin: allowOrigins,
+    credentials: true,
+  })
+);
+app.use(express.json());
+
+const wsPath = (process.env.COLLAB_WS_PATH || "/collab").replace(/\/$/, "");
+
+app.get("/", (_req, res) => {
+  res.json({ ok: true });
+});
+
+app.get("/healthz", (_req, res) => res.json({ ok: true }));
+app.get(wsPath, (_req, res) => res.json({ ok: true }));
+app.use("/ai", aiRoutes);
 
 // (Future) JWT check:
 // app.use("/collab", verifyRoomTokenMiddleware);
 
-// HTTP proxy for any REST endpoints the ws server might expose (usually none)
-const collabProxy = createProxyMiddleware({
-  target: YW_TARGET,
-  changeOrigin: true,
-  ws: true,
-  pathRewrite: { "^/collab": "" },
-});
-
-app.use("/collab", collabProxy);
-
-// Create HTTP server so we can hook WS upgrades too
 export const server = http.createServer(app);
 
-// Upgrade proxy: forward WebSocket upgrade to y-websocket
-server.on("upgrade", (req, socket, head) => {
-  if (req.url && req.url.startsWith("/collab")) {
-    collabProxy.upgrade(req, socket, head);
-  } else {
-    socket.destroy();
+function extractDocName(requestUrl) {
+  if (!requestUrl) {
+    return "room";
   }
+
+  const [path, query] = requestUrl.split("?");
+  if (query) {
+    const params = new URLSearchParams(query);
+    const roomParam = params.get("room");
+    if (roomParam) {
+      return roomParam;
+    }
+  }
+
+  let docPath = path;
+  if (docPath.startsWith(wsPath)) {
+    docPath = docPath.slice(wsPath.length);
+  }
+
+  return docPath.replace(/^\//, "") || "room";
+}
+const wss = new WebSocketServer({ noServer: true });
+
+wss.on("connection", (ws, req) => {
+  const docName = extractDocName(req.url ?? "");
+
+  setupWSConnection(ws, req, {
+    gc: true,
+    docName,
+  });
 });
 
-const PORT = Number(process.env.PORT || 3004);
+server.on("upgrade", (req, socket, head) => {
+  if (!req.url || !req.url.startsWith(wsPath)) {
+    socket.destroy();
+    return;
+  }
 
-server.listen(PORT, () => {
-  console.log(`Collab API (HTTP) on http://localhost:${PORT}`);
-  console.log(`Gemini AI route ready at http://localhost:${PORT}/ai`);
-  console.log(`Proxying WS at ws://localhost:${PORT}/collab  ->  ${YW_TARGET}`);
+  wss.handleUpgrade(req, socket, head, (ws) => {
+    wss.emit("connection", ws, req);
+  });
 });
 
-app.get("/healthz", (_req, res) => res.json({ ok: true }));
+const PORT = Number(process.env.PORT || 8080);
+
+server.listen(PORT, "0.0.0.0", () => {
+  console.log(`Collab service listening on http://0.0.0.0:${PORT}`);
+  console.log(`WebSocket endpoint available at ws://0.0.0.0:${PORT}${wsPath}`);
+});

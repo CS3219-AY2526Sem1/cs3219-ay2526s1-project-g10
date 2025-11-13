@@ -36,14 +36,11 @@ export type QuestionPayload = {
 
 export type QuestionUpdatePayload = Partial<QuestionPayload>
 
-const API_GATEWAY_URL = process.env.NEXT_PUBLIC_API_GATEWAY_URL?.replace(/\/$/, "")
-const QUESTION_SERVICE_URL = process.env.NEXT_PUBLIC_QUESTION_SERVICE_URL?.replace(/\/$/, "")
+import { getRuntimeEnv, resolveGatewayBase, stripTrailingSlash } from "../../lib/runtimeEnv"
 
-if (!API_GATEWAY_URL && !QUESTION_SERVICE_URL) {
-  console.warn(
-    "Missing NEXT_PUBLIC_API_GATEWAY_URL and NEXT_PUBLIC_QUESTION_SERVICE_URL environment variables for question service requests",
-  )
-}
+const gatewayBase = stripTrailingSlash(resolveGatewayBase())
+const questionServiceOverride = getRuntimeEnv("NEXT_PUBLIC_QUESTION_SERVICE_URL")
+const questionServiceBase = questionServiceOverride ? stripTrailingSlash(questionServiceOverride) : undefined
 
 function mapDifficulty(difficulty: string): "Easy" | "Medium" | "Hard" {
   const map: Record<string, "Easy" | "Medium" | "Hard"> = {
@@ -114,23 +111,19 @@ async function parseResponse(response: Response) {
 }
 
 function buildApiUrl(path: string): string {
-  if (API_GATEWAY_URL && API_GATEWAY_URL.length > 0) {
-    return `${API_GATEWAY_URL}${path}`
+  const base = questionServiceBase ?? gatewayBase
+  if (!base) {
+    throw new Error("Question service URL is not configured")
   }
-  if (QUESTION_SERVICE_URL && QUESTION_SERVICE_URL.length > 0) {
-    return `${QUESTION_SERVICE_URL}${path}`
-  }
-  throw new Error("Question service URL is not configured")
+  return `${base}${path}`
 }
 
 function ensureBaseUrl(): string {
-  if (API_GATEWAY_URL && API_GATEWAY_URL.length > 0) {
-    return API_GATEWAY_URL
+  const base = questionServiceBase ?? gatewayBase
+  if (!base) {
+    throw new Error("Question service URL is not configured")
   }
-  if (QUESTION_SERVICE_URL && QUESTION_SERVICE_URL.length > 0) {
-    return QUESTION_SERVICE_URL
-  }
-  throw new Error("Question service URL is not configured")
+  return base
 }
 
 export async function getQuestion(id: string): Promise<Question | null> {

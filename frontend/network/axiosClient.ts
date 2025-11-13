@@ -1,13 +1,24 @@
 import axios from "axios";
 
+import { getRuntimeEnv, resolveGatewayBase, stripTrailingSlash } from "../lib/runtimeEnv";
+
+const gatewayBase = resolveGatewayBase();
+
+// Default to the Cloud Run gateway when explicit service URLs are absent.
+const userBase: string = getRuntimeEnv("NEXT_PUBLIC_USER_API")
+  ?? (gatewayBase ? `${gatewayBase}/users` : "http://localhost:3001");
+
+const matchBase: string = getRuntimeEnv("NEXT_PUBLIC_MATCH_API")
+  ?? (gatewayBase ? `${gatewayBase}/match` : "http://localhost:3002");
+
 export const userClient = axios.create({
-  baseURL: process.env.NEXT_PUBLIC_USER_API ?? "http://localhost:3001", 
-  timeout: 5000,
+  baseURL: stripTrailingSlash(userBase),
+  timeout: 15000,
 });
 
 export const matchClient = axios.create({
-  baseURL: process.env.NEXT_PUBLIC_MATCH_API ?? "http://localhost:3002", 
-  timeout: 5000,
+  baseURL: stripTrailingSlash(matchBase),
+  timeout: 15000,
 });
 
 // Common interceptors (JWT, request ID)

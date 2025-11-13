@@ -4,8 +4,8 @@ import { useState } from "react"
 import { Button } from "../../../components/ui/button"
 import { Input } from "../../../components/ui/input"
 import { Label } from "../../../components/ui/label"
-import { createClient } from "@supabase/supabase-js"
 import { useRouter } from "next/navigation"
+import { createClient } from "@supabase/supabase-js"
 
 export default function ResetPasswordPage() {
   const [password, setPassword] = useState("")
@@ -13,16 +13,20 @@ export default function ResetPasswordPage() {
   const [message, setMessage] = useState("")
   const router = useRouter()
 
-  const supabase = createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-  )
-
   const handleReset = async (e: React.FormEvent) => {
     e.preventDefault()
     setStatus("loading")
 
     try {
+      const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+      const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+
+      if (!supabaseUrl || !supabaseAnonKey) {
+        throw new Error("Supabase environment variables are not configured")
+      }
+
+      const supabase = createClient(supabaseUrl, supabaseAnonKey)
+
       const { error } = await supabase.auth.updateUser({ password })
       if (error) throw error
 

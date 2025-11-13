@@ -1,3 +1,5 @@
+import { getRuntimeEnv, resolveGatewayBase, stripTrailingSlash } from "../../lib/runtimeEnv"
+
 // Real admin service
 export interface AdminUser {
   id: string
@@ -38,13 +40,17 @@ function buildAuthHeaders(additional?: Record<string, string>): Record<string, s
   }
 }
 
-const API_GATEWAY_URL = process.env.NEXT_PUBLIC_API_GATEWAY_URL?.replace(/\/$/, "")
+const gatewayEnv = getRuntimeEnv("NEXT_PUBLIC_API_GATEWAY_URL")
+const apiGatewayBase = gatewayEnv ? stripTrailingSlash(gatewayEnv) : undefined
 
 function buildUrl(path: string): string {
-  if (API_GATEWAY_URL && API_GATEWAY_URL.length > 0) {
-    return `${API_GATEWAY_URL}${path}`
+  if (apiGatewayBase && apiGatewayBase.length > 0) {
+    return `${apiGatewayBase}${path}`
   }
-  return `/api${path}`
+  if (process.env.NODE_ENV === "development") {
+    return `/api${path}`
+  }
+  return `${stripTrailingSlash(resolveGatewayBase())}${path}`
 }
 
 export async function getAdminStats(): Promise<AdminStats> {

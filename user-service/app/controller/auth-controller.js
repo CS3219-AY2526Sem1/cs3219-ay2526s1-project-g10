@@ -1,6 +1,8 @@
 import supabase from "../../supabaseClient.js";
 import { mapProfileToResponse, updateAuthAdminMetadata } from "./user-controller.js";
 
+const FRONTEND_CALLBACK_BASE = "https://frontend-j4i3ud5cyq-as.a.run.app";
+
 export async function handleLogin(req, res) {
   const { email, password } = req.body;
   if (!email || !password) {
@@ -96,38 +98,51 @@ export async function handleSignup(req, res) {
       return res.status(409).json({ message: "username or email already exists" });
     }
 
-    const { data, error } = await supabase.auth.admin.createUser({
+    const explicitRedirect = process.env.EMAIL_CONFIRM_REDIRECT?.trim();
+    const emailRedirectTo = explicitRedirect && explicitRedirect.length > 0
+      ? explicitRedirect
+      : `${FRONTEND_CALLBACK_BASE.replace(/\/$/, "")}/auth/callback?type=signup`;
+
+    const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
       email,
       password,
-      email_confirm: false,
-      user_metadata: {
-        username,
-        isAdmin,
-        role: isAdmin ? "admin" : "user",
+      options: {
+        emailRedirectTo,
+        data: {
+          username,
+          isAdmin,
+          role: isAdmin ? "admin" : "user",
+        },
       },
     });
 
-    if (error || !data?.user) {
-      return res.status(400).json({ message: error?.message ?? "Failed to create user" });
+    if (signUpError || !signUpData?.user) {
+      return res.status(400).json({ message: signUpError?.message ?? "Failed to create user" });
     }
 
-    const { error: profileError } = await supabase.from("users").insert({
-      id: data.user.id,
-      email,
-      username,
-      isAdmin,
-    });
+    const createdAt = new Date().toISOString();
+    const insertResult = await supabase
+      .from("users")
+      .insert({
+        id: signUpData.user.id,
+        email,
+        username,
+        isAdmin,
+        createdAt,
+      })
+      .select("id")
+      .single();
 
-    if (profileError) {
-      await supabase.auth.admin.deleteUser(data.user.id);
-      return res.status(400).json({ message: profileError.message ?? "Failed to create user profile" });
+    if (insertResult.error) {
+      await supabase.auth.admin.deleteUser(signUpData.user.id);
+      return res.status(400).json({ message: insertResult.error.message ?? "Failed to create user profile" });
     }
 
     return res.status(201).json({
       message: "User created",
       data: mapProfileToResponse(
-        { id: data.user.id, email, username, isAdmin, createdAt: new Date().toISOString() },
-        data.user.email_confirmed_at
+        { id: signUpData.user.id, email, username, isAdmin, createdAt },
+        signUpData.user.email_confirmed_at
       ),
     });
   } catch (err) {

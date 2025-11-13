@@ -2,11 +2,11 @@
 
 import Link from "next/link"
 import { useSearchParams } from "next/navigation"
-import { useState } from "react"
+import { Suspense, useState } from "react"
 import { Button } from "../../../components/ui/button"
 import { createClient } from "@supabase/supabase-js"
 
-export default function VerifyEmailPage() {
+function VerifyEmailPageContent() {
   const searchParams = useSearchParams()
   const email = searchParams.get("email")
   const [isResending, setIsResending] = useState(false)
@@ -19,8 +19,8 @@ export default function VerifyEmailPage() {
     setMessage("")
 
     try {
-      const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
-      const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+      const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || "https://zlsoqzwmopjffybmxjov.supabase.co"
+      const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inpsc29xendtb3BqZmZ5Ym14am92Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTg3ODI5MTQsImV4cCI6MjA3NDM1ODkxNH0.qwqVDsyV40M-PJlXjPzUbp1KJPQtyqT3eAIEDZdps2E"
 
       if (!supabaseUrl || !supabaseKey) {
         throw new Error("Supabase credentials missing")
@@ -80,5 +80,13 @@ export default function VerifyEmailPage() {
         <p className="text-xs text-muted-foreground mt-4">Didn't receive the email? Check your spam folder.</p>
       </div>
     </div>
+  )
+}
+
+export default function VerifyEmailPage() {
+  return (
+    <Suspense fallback={null}>
+      <VerifyEmailPageContent />
+    </Suspense>
   )
 }

@@ -1,15 +1,15 @@
 "use client"
-import { useEffect } from "react"
+import { Suspense, useEffect } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 import { LoginForm } from "../../../components/login-form"
 import { useAuth } from "../../../contexts/auth-context"
 
-export default function LoginPage() {
+function LoginPageContent() {
   const { user, loading } = useAuth()
   const router = useRouter()
   const searchParams = useSearchParams()
   const next = searchParams?.get("next") ?? "/main"
-  const message = searchParams?.get('message')
+  const message = searchParams?.get("message")
 
   useEffect(() => {
     if (!loading && user) {
@@ -29,5 +29,13 @@ export default function LoginPage() {
         <LoginForm />
       </div>
     </div>
+  )
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense fallback={null}>
+      <LoginPageContent />
+    </Suspense>
   )
 }
