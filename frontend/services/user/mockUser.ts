@@ -1,34 +1,12 @@
 // Mock user service
-export interface UserProfile {
-  id: string
-  name: string
-  email: string
-  role: "user" | "admin"
-  joinedDate: string
-  questionsCompleted: number
-  currentStreak: number
-  longestStreak: number
-}
-
-export interface Attempt {
-  id: string
-  questionTitle: string
-  difficulty: "Easy" | "Medium" | "Hard"
-  status: "Completed" | "In Progress" | "Failed"
-  score: number
-  date: string
-  duration: string
-}
+import { UserProfile } from "./types"
 
 const MOCK_PROFILE: UserProfile = {
   id: "1",
-  name: "John Doe",
+  username: "John Doe",
   email: "user@example.com",
-  role: "user",
-  joinedDate: "2024-01-15",
-  questionsCompleted: 47,
-  currentStreak: 5,
-  longestStreak: 12,
+  isAdmin: false,
+  createdAt: "2024-01-15T00:00:00.000Z",
 }
 
 export async function getUserProfile(userId: string): Promise<UserProfile> {
