@@ -40,6 +40,9 @@ app.use("/match", httpProxy(process.env.MATCHING_SERVICE_URL));
 app.use("/questions", httpProxy(process.env.QUESTION_SERVICE_URL, {
     proxyReqPathResolver: (req) => `/questions${req.url}`
 }));
+app.use("/history", httpProxy(process.env.QUESTION_SERVICE_URL, {
+    proxyReqPathResolver: (req) => `/history${req.url}`
+}));
 app.use("/collab", httpProxy(process.env.COLLAB_SERVICE_URL));
   
 // Health Check Endpoint 

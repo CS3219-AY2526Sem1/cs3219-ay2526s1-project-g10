@@ -15,24 +15,27 @@ export interface Attempt {
   difficulty?: "Easy" | "Medium" | "Hard"
 }
 
-const QUESTION_SERVICE_URL = process.env.NEXT_PUBLIC_QUESTION_SERVICE_URL?.replace(/\/$/, "")
-const API_GATEWAY_URL = process.env.NEXT_PUBLIC_API_GATEWAY_URL?.replace(/\/$/, "")
+const stripTrailingSlash = (url?: string | null): string | undefined => (url ? url.replace(/\/+$/, "") : undefined)
 
-function resolveHistoryUrl(gatewayPath: string, questionServicePath: string): string {
-  if (API_GATEWAY_URL && API_GATEWAY_URL.length > 0) {
-    return `${API_GATEWAY_URL}${gatewayPath}`
+const gatewayBase = stripTrailingSlash(process.env.NEXT_PUBLIC_API_GATEWAY_URL)
+const questionServiceBase = stripTrailingSlash(process.env.NEXT_PUBLIC_QUESTION_SERVICE_URL)
+
+const resolveHistoryBase = (): string => {
+  const base = gatewayBase ?? questionServiceBase
+  if (!base) {
+    throw new Error("History service URL is not configured")
   }
-  if (QUESTION_SERVICE_URL && QUESTION_SERVICE_URL.length > 0) {
-    return `${QUESTION_SERVICE_URL}${questionServicePath}`
-  }
-  throw new Error("History service URL is not configured")
+  return base
 }
 
-function requireQuestionService(path: string): string {
-  if (!QUESTION_SERVICE_URL || QUESTION_SERVICE_URL.length === 0) {
-    throw new Error("Question service URL is not configured")
+const historyRoot = (): string => `${resolveHistoryBase()}/history`
+
+const authorize = (): Record<string, string> => {
+  if (typeof window === "undefined") {
+    return {}
   }
-  return `${QUESTION_SERVICE_URL}${path}`
+  const token = window.localStorage.getItem("auth_token")
+  return token ? { Authorization: `Bearer ${token}` } : {}
 }
 
 export interface AdminAttempt extends Attempt {
@@ -40,10 +43,8 @@ export interface AdminAttempt extends Attempt {
 }
 
 export async function getUserAttempts(userId: string): Promise<Attempt[]> {
-  const response = await fetch(resolveHistoryUrl(`/users/${userId}/attempts`, `/history/user/${userId}`), {
-    headers: {
-      Authorization: `Bearer ${localStorage.getItem("auth_token")}`,
-    },
+  const response = await fetch(`${historyRoot()}/user/${userId}`, {
+    headers: authorize(),
   })
 
   if (!response.ok) {
@@ -67,11 +68,12 @@ export async function createPendingAttempt(attemptData: {
     questionJson: safeQuestion,
   }
 
-  const response = await fetch(requireQuestionService("/history"), {
+  const target = historyRoot()
+  const response = await fetch(target, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
-      Authorization: `Bearer ${localStorage.getItem("auth_token")}`,
+      ...authorize(),
     },
     body: JSON.stringify(payload),
   })
@@ -93,11 +95,11 @@ export async function updateAttempt(
     questionId: string
   }>,
 ): Promise<Attempt> {
-  const response = await fetch(requireQuestionService(`/history/${attemptId}`), {
+  const response = await fetch(`${historyRoot()}/${attemptId}`, {
     method: "PATCH",
     headers: {
       "Content-Type": "application/json",
-      Authorization: `Bearer ${localStorage.getItem("auth_token")}`,
+      ...authorize(),
     },
     body: JSON.stringify(updateData),
   })
@@ -110,14 +112,13 @@ export async function updateAttempt(
 }
 
 export async function getAllAttempts(): Promise<AdminAttempt[]> {
-  if (!API_GATEWAY_URL || API_GATEWAY_URL.length === 0) {
-    throw new Error("NEXT_PUBLIC_API_GATEWAY_URL must be set to fetch admin attempts")
+  const base = gatewayBase ?? questionServiceBase
+  if (!base) {
+    throw new Error("History service URL is not configured")
   }
 
-  const response = await fetch(`${API_GATEWAY_URL}/admin/attempts`, {
-    headers: {
-      Authorization: `Bearer ${localStorage.getItem("auth_token")}`,
-    },
+  const response = await fetch(`${base}/admin/attempts`, {
+    headers: authorize(),
   })
 
   if (!response.ok) {
