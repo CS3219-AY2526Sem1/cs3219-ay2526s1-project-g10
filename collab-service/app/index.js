@@ -6,9 +6,22 @@ import { setupWSConnection } from "y-websocket/bin/utils";
 import aiRoutes from "./routes/ai-routes.js";
 
 const app = express();
-const allowOrigins = process.env.COLLAB_ALLOWED_ORIGINS
-  ? process.env.COLLAB_ALLOWED_ORIGINS.split(",").map((origin) => origin.trim()).filter(Boolean)
-  : ["http://localhost:3000"];
+const defaultAllowedOrigins = [
+  "http://localhost:3000",
+  "https://frontend-j4i3ud5cyq-as.a.run.app",
+];
+
+const allowOrigins = (() => {
+  if (!process.env.COLLAB_ALLOWED_ORIGINS) {
+    return defaultAllowedOrigins;
+  }
+
+  const parsed = process.env.COLLAB_ALLOWED_ORIGINS.split(",")
+    .map((origin) => origin.trim())
+    .filter(Boolean);
+
+  return parsed.length > 0 ? parsed : defaultAllowedOrigins;
+})();
 
 app.use(
   cors({
