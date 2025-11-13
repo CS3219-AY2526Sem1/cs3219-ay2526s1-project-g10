@@ -8,6 +8,8 @@ import { MonacoBinding } from "y-monaco"
 import { WebsocketProvider } from "y-websocket"
 import axios from "axios"
 
+import { getRuntimeEnv, stripTrailingSlash } from "../../../lib/runtimeEnv"
+
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -55,7 +57,54 @@ const API = axios.create({
   baseURL: "https://emkc.org/api/v2/piston",
 })
 
-const DEFAULT_COLLAB_WS = "ws://localhost:3004/collab"
+const LOCAL_COLLAB_WS = "ws://localhost:3004/collab"
+const PROD_COLLAB_WS = "wss://collab-service-j4i3ud5cyq-as.a.run.app/collab"
+
+const resolveCollabWsBase = (): string => {
+  const explicitWs = getRuntimeEnv("NEXT_PUBLIC_COLLAB_WS_URL")
+  if (explicitWs && explicitWs.trim().length > 0) {
+    try {
+      const parsed = new URL(explicitWs)
+      if (parsed.protocol === "http:" || parsed.protocol === "https:") {
+        parsed.protocol = parsed.protocol === "https:" ? "wss:" : "ws:"
+        return stripTrailingSlash(parsed.toString())
+      }
+      return stripTrailingSlash(explicitWs)
+    } catch (error) {
+      console.warn("Invalid NEXT_PUBLIC_COLLAB_WS_URL provided; using raw value", error)
+      return stripTrailingSlash(explicitWs)
+    }
+  }
+
+  const httpBase = getRuntimeEnv("NEXT_PUBLIC_COLLAB_URL")
+  if (httpBase && httpBase.trim().length > 0) {
+    try {
+      const parsed = new URL(httpBase)
+      const wsProtocol = parsed.protocol === "https:" ? "wss:" : "ws:"
+      const basePath = stripTrailingSlash(parsed.pathname || "")
+      const sanitizedBase = basePath.replace(/^\/+/, "")
+      const pathSuffix = sanitizedBase.length > 0 ? `${sanitizedBase}/collab` : "collab"
+      return `${wsProtocol}//${parsed.host}/${pathSuffix}`
+    } catch (error) {
+      console.warn("Invalid NEXT_PUBLIC_COLLAB_URL provided; falling back to defaults", error)
+    }
+  }
+
+  if (typeof window !== "undefined") {
+    const { hostname } = window.location
+    const isLocalhost = hostname === "localhost" || hostname === "127.0.0.1"
+    if (isLocalhost) {
+      return LOCAL_COLLAB_WS
+    }
+    return PROD_COLLAB_WS
+  }
+
+  if (process.env.NODE_ENV !== "production") {
+    return LOCAL_COLLAB_WS
+  }
+
+  return PROD_COLLAB_WS
+}
 
 
 export default function CollaborationEditor({ roomId, participants, onRequestLeave, leaving, attemptId, onCodeChange, questionDescription }: CollaborationEditorProps) {
@@ -83,6 +132,7 @@ export default function CollaborationEditor({ roomId, participants, onRequestLea
   const [aiMessages, setAIMessages] = useState<AIMessage[]>([])
   const [aiLoading, setAILoading] = useState<boolean>(false)
   const storedAttemptId = useRef<String | null>(null);
+  const [collabWsBase] = useState(resolveCollabWsBase)
 
   useEffect(() => {
     if (!attemptId || storedAttemptId.current) return;
@@ -94,8 +144,7 @@ export default function CollaborationEditor({ roomId, participants, onRequestLea
     if (!roomId) return
   const ydoc = new Y.Doc()
     ydocRef.current = ydoc
-  const wsUrl = process.env.NEXT_PUBLIC_COLLAB_WS_URL ?? DEFAULT_COLLAB_WS
-  const provider = new WebsocketProvider(wsUrl, roomId, ydoc)
+  const provider = new WebsocketProvider(collabWsBase, roomId, ydoc)
     providerRef.current = provider
     return () => {
       if (awarenessChangeHandlerRef.current && provider.awareness) {
@@ -117,7 +166,7 @@ export default function CollaborationEditor({ roomId, participants, onRequestLea
       ydoc.destroy()
       ydocRef.current = null
     }
-  }, [roomId])
+  }, [roomId, collabWsBase])
 
   useEffect(() => {
     if (!ydocRef.current) return
