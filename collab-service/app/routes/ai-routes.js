@@ -27,7 +27,8 @@ If the user asks for a hint, guide them toward the solution without giving away 
 If they ask for debugging help, point out the likely issue and suggest fixes.
 Explain your reasoning clearly.
     `;
-
+    const key = process.env.GEMINI_API_KEY;
+    console.log("Using Gemini API Key:", key)
     const response = await axios.post(
       "https://generativelanguage.googleapis.com/v1/models/gemini-2.5-flash:generateContent",
       {
