@@ -28,7 +28,11 @@ If they ask for debugging help, point out the likely issue and suggest fixes.
 Explain your reasoning clearly.
     `;
     const key = process.env.GEMINI_API_KEY;
-    console.log("Using Gemini API Key:", key)
+    if (!key) {
+      console.error("Gemini API key missing in environment");
+      return res.status(500).json({ error: "Gemini service unavailable" });
+    }
+
     const response = await axios.post(
       "https://generativelanguage.googleapis.com/v1/models/gemini-2.5-flash:generateContent",
       {
@@ -37,7 +41,7 @@ Explain your reasoning clearly.
       {
         headers: {
           "Content-Type": "application/json",
-          "x-goog-api-key": process.env.GEMINI_API_KEY,
+          "x-goog-api-key": key,
         },
       }
     );
@@ -45,9 +49,20 @@ Explain your reasoning clearly.
     const reply = response.data?.candidates?.[0]?.content?.parts?.[0]?.text
       || "Sorry, I couldn’t generate a response.";
 
+    console.log("Gemini reply:", reply);
+
     res.json({ reply });
   } catch (error) {
-    console.error("Gemini API error:", error.response?.data || error.message);
+    const status = error.response?.status;
+    const payload = error.response?.data || error.message;
+    console.error("Gemini API error:", payload);
+
+    if (status === 429 || status === 503) {
+      return res
+        .status(503)
+        .json({ error: "Gemini is currently overloaded. Please try again in a moment." });
+    }
+
     res.status(500).json({ error: "Failed to get response from Gemini" });
   }
 });

@@ -224,7 +224,7 @@ function CollaborationPageContent() {
     // Poll for participant updates every 5 seconds
     const interval = setInterval(() => {
       void fetchParticipants()
-    }, 5000)
+    }, 10000)
 
     return () => {
       isCancelled = true
